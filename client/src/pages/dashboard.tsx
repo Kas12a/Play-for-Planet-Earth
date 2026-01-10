@@ -2,6 +2,7 @@ import { useStore, ACTION_TYPES } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { 
   Leaf, 
   Flame, 
@@ -15,7 +16,11 @@ import {
   Sprout, 
   Recycle,
   ShoppingBag,
-  ArrowRight
+  ArrowRight,
+  Coins,
+  TrendingUp,
+  Cloud,
+  Trash2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useEffect } from "react";
@@ -30,7 +35,7 @@ import {
 } from "recharts";
 
 export default function DashboardPage() {
-  const { user, actions } = useStore();
+  const { user, actions, transactions } = useStore();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -43,13 +48,27 @@ export default function DashboardPage() {
 
   // Mock data calculations
   const weeklyGoal = 500;
-  const currentWeeklyPoints = user.points % 500; // Just for visualization
+  const currentWeeklyPoints = user.points % 500;
   const progress = Math.min((currentWeeklyPoints / weeklyGoal) * 100, 100);
+
+  // Calculate impact from actions
+  const weeklyActions = actions.filter(a => 
+    new Date(a.timestamp) > new Date(Date.now() - 7 * 86400000)
+  );
+  const totalCO2Saved = weeklyActions.reduce((sum, a) => {
+    const action = ACTION_TYPES.find(at => at.id === a.actionId);
+    return sum + (action?.impactCO2 || 0);
+  }, 0) || 12.5; // Default for demo
+
+  const totalWasteAvoided = weeklyActions.reduce((sum, a) => {
+    const action = ACTION_TYPES.find(at => at.id === a.actionId);
+    return sum + (action?.impactWaste || 0);
+  }, 0) || 2.3;
 
   const icons: Record<string, any> = {
     droplet: Droplet,
     utensils: Utensils,
-    footprints: Bus, // Closest match
+    footprints: Bus,
     bus: Bus,
     'thermometer-snowflake': Zap,
     sprout: Sprout,
@@ -58,32 +77,55 @@ export default function DashboardPage() {
   };
 
   const chartData = [
-    { day: "Mon", points: 40 },
-    { day: "Tue", points: 80 },
-    { day: "Wed", points: 20 },
-    { day: "Thu", points: 90 },
-    { day: "Fri", points: 50 },
-    { day: "Sat", points: 100 },
-    { day: "Sun", points: 40 },
+    { day: "Mon", credits: 40 },
+    { day: "Tue", credits: 80 },
+    { day: "Wed", credits: 20 },
+    { day: "Thu", credits: 90 },
+    { day: "Fri", credits: 50 },
+    { day: "Sat", credits: 100 },
+    { day: "Sun", credits: 40 },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20 md:pb-0">
+      {/* Investor Mode Badge */}
+      {user.investorMode && (
+        <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center justify-center gap-2">
+          <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">DEMO MODE</Badge>
+          <span className="text-sm text-yellow-500">Viewing sample data for demonstration</span>
+        </div>
+      )}
+
       {/* Welcome & Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 to-card border-primary/20">
           <CardHeader className="pb-2">
-            <CardTitle className="font-display text-2xl">Hi, {user.name}!</CardTitle>
+            <CardTitle className="font-display text-2xl">Hi, {user.name || 'Eco Warrior'}!</CardTitle>
             <CardDescription>Ready to save the planet today?</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4 mt-2">
               <Link href="/actions">
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105">
+                <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105">
                   <PlusCircle className="mr-2 h-5 w-5" /> Log Action
                 </Button>
               </Link>
+              <Link href="/credits">
+                <Button variant="outline">
+                  <Coins className="mr-2 h-4 w-4" /> View Credits
+                </Button>
+              </Link>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <Coins className="h-6 w-6 text-primary" />
+            </div>
+            <div className="text-3xl font-bold font-mono">{user.credits}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Credits</div>
           </CardContent>
         </Card>
 
@@ -96,19 +138,95 @@ export default function DashboardPage() {
             <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Day Streak</div>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
-          <CardContent className="pt-6 flex flex-col items-center justify-center text-center">
-             <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-2">
-              <Trophy className="h-6 w-6 text-blue-500" />
+      {/* Impact Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gradient-to-br from-emerald-500/5 to-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-500/10">
+                <Cloud className="w-6 h-6 text-emerald-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold font-mono">{totalCO2Saved.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
+                <div className="text-sm text-muted-foreground">CO2e saved this week</div>
+              </div>
             </div>
-            <div className="text-3xl font-bold font-mono">{user.points}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Points</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-500/5 to-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-blue-500/10">
+                <Trash2 className="w-6 h-6 text-blue-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold font-mono">{totalWasteAvoided.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
+                <div className="text-sm text-muted-foreground">Waste avoided this week</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500/5 to-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/10">
+                <TrendingUp className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold font-mono">{weeklyActions.length || 8}</div>
+                <div className="text-sm text-muted-foreground">Actions this week</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Goal & Impact */}
+      {/* Why PfPE Works - Investor Friendly */}
+      <Card className="border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Leaf className="w-5 h-5 text-primary" />
+            Why Play for Planet Works
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+              <div className="p-2 rounded-full bg-primary/10">
+                <Target className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm">Daily Quests</div>
+                <div className="text-xs text-muted-foreground">Build sustainable habits through gamified challenges</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+              <div className="p-2 rounded-full bg-primary/10">
+                <Trophy className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm">Community Ranking</div>
+                <div className="text-xs text-muted-foreground">Compete and collaborate with your cohort</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+              <div className="p-2 rounded-full bg-primary/10">
+                <Coins className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm">Real Rewards</div>
+                <div className="text-xs text-muted-foreground">Earn credits for tangible eco-friendly rewards</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Goal & Chart */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-2">
           <CardHeader>
@@ -122,39 +240,29 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Progress value={progress} className="h-3 mb-4" />
-            <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="p-4 rounded-xl bg-muted/50">
-                <div className="text-sm text-muted-foreground mb-1">CO2e Saved</div>
-                <div className="text-2xl font-bold font-mono">12.5 <span className="text-sm font-sans text-muted-foreground">kg</span></div>
-              </div>
-               <div className="p-4 rounded-xl bg-muted/50">
-                <div className="text-sm text-muted-foreground mb-1">Waste Avoided</div>
-                <div className="text-2xl font-bold font-mono">3 <span className="text-sm font-sans text-muted-foreground">items</span></div>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Impact Trend</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Credits Trend</CardTitle>
           </CardHeader>
-          <CardContent className="h-[200px]">
+          <CardContent className="h-[120px]">
              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <XAxis dataKey="day" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="day" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
                     itemStyle={{ color: 'hsl(var(--primary))' }}
                   />
-                  <Line type="monotone" dataKey="points" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "white" }} />
+                  <Line type="monotone" dataKey="credits" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: "white" }} />
                 </LineChart>
              </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions List (Suggestions) */}
+      {/* Quick Actions List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold font-display">Recommended Actions</h2>
@@ -174,7 +282,9 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm leading-tight mb-1">{action.title}</h3>
-                    <div className="text-xs text-muted-foreground">+{action.points} pts</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Coins className="w-3 h-3" /> +{action.baseRewardCredits}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

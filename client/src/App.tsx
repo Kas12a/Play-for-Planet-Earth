@@ -14,6 +14,9 @@ import QuestsPage from "@/pages/quests";
 import LeaderboardPage from "@/pages/leaderboard";
 import LearnPage from "@/pages/learn";
 import ProfilePage from "@/pages/profile";
+import CreditsPage from "@/pages/credits";
+import RedeemPage from "@/pages/redeem";
+import DonatePage from "@/pages/donate";
 import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
@@ -30,6 +33,9 @@ function Router() {
         <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/learn" component={LearnPage} />
         <Route path="/profile" component={ProfilePage} />
+        <Route path="/credits" component={CreditsPage} />
+        <Route path="/redeem" component={RedeemPage} />
+        <Route path="/donate" component={DonatePage} />
         <Route path="/admin" component={AdminPage} />
         
         <Route component={NotFound} />
