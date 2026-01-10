@@ -1,0 +1,133 @@
+You are working on my existing Play for Planet Earth (PfPE) app codebase (Expo React Native + Expo Router, Supabase backend, deployed as a PWA). Goal: make the app investor-friendly AND usable as a real beta for a small community. Changes must be SMALL and shippable soon (no big refactors, no heavy dependencies).
+
+NON-NEGOTIABLES
+- Keep the current UI/branding and match the existing Figma style (dark green theme + neon accent #D9FF3F).
+- Keep route structure: main tabs in /app/(tabs); detail/modals outside (tabs).
+- Shared UI stays in /components/ui and theme in /src/theme.
+- Avoid heavy new dependencies.
+- Must work even if offline or user is not logged in (graceful fallbacks).
+- No complex “social network” build. Keep community features lightweight.
+
+WHAT TO ADD (INVESTOR + BETA READY)
+
+A) Dual Mode: Investor Demo Mode + Beta Community Mode
+1) Investor Mode toggle (Profile)
+- Toggle: “Investor Mode (Demo)”
+- When ON:
+  - Use seeded demo data for profile/quests/leaderboard/rewards (fake but realistic).
+  - Show small “DEMO” badge in headers.
+  - Disable/avoid protected backend calls to prevent auth issues in demos.
+  - Store locally (AsyncStorage or existing local store pattern).
+
+2) Beta Mode (default)
+- Normal real app behavior.
+- Add a “Beta” badge (small) in Profile only (not everywhere).
+
+B) Invite-only Beta Access (small but powerful)
+- Create a lightweight invite gate:
+  - On first run (or before full access), show “Join the Beta” screen.
+  - User can enter an invite code OR continue in “Explore mode” with limited features.
+- Invite code validation:
+  - EITHER: check code against a simple Supabase table (beta_invites) IF it exists.
+  - OR fallback: accept a small set of hardcoded codes stored in app config (ENV) for now.
+- When invite is accepted:
+  - Save “beta_access=true” locally.
+  - Unlock Leaderboard and ability to submit feedback.
+- Explore mode (no code):
+  - User can view Home + Quests but leaderboard is read-only or hidden.
+
+C) Lightweight Community Loop (no big social build)
+1) Community Leaderboard (small community friendly)
+- Keep the current leaderboard UI but add:
+  - “This Week” + “All Time” toggle (UI only; data can be derived).
+  - “Your rank” pinned row.
+- In Beta Mode:
+  - Use real data if available; otherwise show “Not enough data yet” empty state + encourage inviting friends.
+- In Investor Mode:
+  - Show seeded leaderboard.
+
+2) Team/Group (OPTIONAL, very light)
+- Add “Join a Group” on Profile (optional):
+  - Input: group code (e.g., “GOLDSMITHS”, “LONDON01”).
+  - Save locally as group_id and filter leaderboard to that group if backend supports; if not, just display group name on Profile and in leaderboard header (“Group: LONDON01”).
+- No group chat, no complex roles.
+
+D) “Investor-friendly Proof” on Home (but also useful for users)
+Add two new Home sections:
+1) “Why PfPE works” card with 3 bullets:
+- Daily quests → habit loop
+- Community ranking → motivation
+- Real rewards → real change
+
+2) “Your week in numbers” card:
+- Quests completed
+- Estimated CO2 saved
+- Active minutes
+Use deterministic estimation constants (no external APIs):
+- CO2 saved = quests_completed * 0.3 kg
+- Active minutes = quests_completed * 6
+If logged in and data exists, use real counts. Otherwise use local counters.
+
+E) Feedback Loop (critical for beta + good for investors)
+Add “Send Feedback” entry point on Profile and after completing a quest:
+- New screen: /app/feedback.tsx (outside tabs)
+- Simple form: category dropdown + text + optional screenshot upload (ONLY if already easy; otherwise skip screenshots).
+- Save feedback:
+  - Prefer Supabase table (beta_feedback) if it exists.
+  - If not, store locally and show “Saved locally; will sync when online.”
+- Add “Report a bug” quick option.
+- Add “Feature request” option.
+
+F) Micro-analytics (local only, investor-friendly, helps beta)
+Instrument local event tracking (no big backend changes):
+- track: app_open, signup_completed, quest_started, quest_completed, reward_viewed, share_clicked, feedback_submitted, invite_accepted
+Store locally in a simple event log with timestamps.
+Add a new screen: /app/insights.tsx (outside tabs) accessible from Profile:
+- KPI cards (derived from local events):
+  - Active days (last 7)
+  - Quests completed (last 7)
+  - Shares (last 7)
+  - Feedback submitted
+If Investor Mode: show “Sample cohort KPIs” using mock numbers clearly labeled as demo.
+
+G) Share Impact (viral + community growth)
+Add “Share your impact” button on Home and Profile:
+- Route: /app/share-impact.tsx (outside tabs) or reuse existing share modal pattern.
+- Generate share text:
+  “This week I completed X quests and saved ~Y kg CO2 with Play for Planet Earth.”
+- Increment share_clicked counter locally.
+
+ONBOARDING POLISH (SMALL)
+- Add a one-screen “Choose your focus” step:
+  - Reduce waste / Eat greener / Move smarter / Learn climate
+- Save selection and display on Profile (“Focus”).
+- Improve empty states (quests/leaderboard/rewards) with clear calls to action.
+
+ENGINEERING REQUIREMENTS
+- TypeScript, follow existing patterns.
+- Use existing UI components from /components/ui.
+- Keep routes outside /app/(tabs) so they don’t show in the tab bar.
+- Don’t break existing auth; if not logged in, show graceful limited mode.
+- No heavy new dependencies. Prefer built-in APIs and existing libraries.
+
+ACCEPTANCE CRITERIA
+- App runs without errors and looks consistent with current design.
+- Investor Mode instantly makes the app feel “alive” with demo data.
+- Beta Mode supports a small community via invite gating + feedback + share.
+- Home shows proof/impact cards using real or local counters.
+- Insights screen shows KPIs derived from local events.
+- All changes are small, localized, and safe to ship quickly.
+
+IMPLEMENTATION ORDER
+1) Scan repo + identify current screens/data flows.
+2) Add Investor Mode + demo data provider (seeded).
+3) Add Invite gate (Beta access) + Explore mode.
+4) Add Feedback screen + local/supabase saving.
+5) Add Home proof cards + Share impact.
+6) Add Insights screen from local event log.
+7) Polish empty states and onboarding focus step.
+
+Return:
+- Summary of changes
+- List of modified/added files
+- Any small next-step ideas that remain lightweight
