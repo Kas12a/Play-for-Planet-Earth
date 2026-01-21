@@ -1,0 +1,126 @@
+You are a senior QA + product engineer. Your mission: make “Play for Planet Earth (PfPE)” ready for a real-world pilot (schools/youth groups/councils). 
+
+CONTEXT
+- Product: Play for Planet Earth (PfPE) – a gamified climate-action app with quests, points/badges, leaderboards, rewards, and profiles.
+- The live PWA may be accessible at: https://play4earth.co (if you have internet access).
+- Current MVP is built with Expo + Supabase (assume typical React Native / Expo Router patterns unless repo shows otherwise).
+- We already saw usability signals: misclick/UI confusion is high (approx. 45% in sign-up, 49% in quest start). Users like the mission concept and visual design. Priority is to reduce confusion in onboarding and starting quests. 
+- Pilot plan: start with core features (habit/quest logging, points/badges, leaderboard, basic content), with safeguarding + privacy in place, and limited partnerships initially (do NOT build big “marketplace/token/API ecosystem” features for pilot unless already implemented and stable).
+
+GOALS (in order)
+1) Identify and fix all PILOT-BLOCKING issues (P0/P1): crashes, auth failures, quest-start failures, data-loss, broken navigation, blank screens, broken Supabase policies, broken deploy build.
+2) Reduce friction in the two highest-risk funnels:
+   A) Sign-up / onboarding
+   B) Start quest / log action
+3) Produce a “Pilot Readiness Report” with:
+   - Bug list (severity, repro steps, expected vs actual, screenshots if possible)
+   - Fixes made (PR/commit list)
+   - Recommendations: what to ADD now vs later; what to REMOVE/disable for pilot
+   - A short pilot test plan (10–15 scenarios) + acceptance criteria.
+
+HARD RULES
+- Optimize for pilot speed and stability. No huge refactors. Prefer targeted fixes.
+- If something is unfinished/unstable, prefer feature flags or temporarily hiding it.
+- Keep changes compatible with existing design system and navigation patterns in the repo.
+
+PHASE 1 — SETUP & BASELINE
+A) Inspect repo: identify stack, routing, state management, analytics/logging, Supabase client usage.
+B) Get it running locally in Replit:
+   - Install dependencies
+   - Run dev server
+   - Run typecheck/lint if available
+   - Build (web/PWA) if supported
+C) If you can access production:
+   - Load play4earth.co
+   - Open console/network and note errors
+   - Record core flows status (signup → home, quest list → quest detail → start quest)
+
+PHASE 2 — PILOT-CRITICAL FLOW TESTS (manual + quick automation)
+Create a minimal test matrix (mobile widths + desktop PWA):
+1) New user sign-up
+2) Login/logout
+3) Password reset (if exists)
+4) Onboarding completion (name/avatar/preferences if exists)
+5) Home loads with real data
+6) Quest list loads (no empty crash)
+7) Quest detail opens
+8) Start quest (tap target area repeatedly to detect mis-taps)
+9) Log an action / submit proof (if exists)
+10) Points/badges update correctly
+11) Leaderboard loads & updates (no infinite loading)
+12) Rewards screen doesn’t break (even if rewards are “coming soon”)
+13) Profile edit / view
+14) Offline/poor connection behavior (at least graceful errors)
+15) App refresh: session persists correctly
+
+For each failure: capture repro steps + stack traces + network calls.
+
+PHASE 3 — BUG HUNTING TARGETS (common pilot killers)
+Investigate and fix issues in these areas:
+A) Auth/session
+   - Token refresh handling
+   - Supabase auth state listeners
+   - Redirect loops (web)
+B) Navigation
+   - Broken routes, wrong relative imports, duplicate routes, back button issues
+C) Data layer
+   - Supabase Row Level Security (RLS) blocking reads/writes
+   - Missing indexes or slow queries causing timeouts
+   - Null/undefined data not handled in UI
+D) UI misclicks / confusion hotspots
+   - Buttons with small hit areas
+   - Non-obvious primary CTA (especially “Start quest”)
+   - Multiple competing CTAs
+   - No loading states / unclear success feedback
+E) Error handling
+   - Add user-friendly error banners/toasts for network/auth failures
+   - Prevent blank screens
+
+PHASE 4 — PILOT READINESS UPGRADES (small, high impact)
+Implement only if lightweight:
+1) In-app feedback button (opens email or simple form) + “Report a bug”
+2) Simple “Pilot Mode” banner + short tutorial overlay for first run
+3) Add analytics events (or verify existing):
+   - signup_started / signup_completed
+   - quest_viewed / quest_start_clicked / quest_started_success / quest_started_failed
+   - action_logged_success / failed
+   - misclick proxy: rapid repeated taps on CTA area
+4) Add basic crash/error logging (Sentry or lightweight alternative) if none exists
+
+PHASE 5 — WHAT TO ADD vs REMOVE FOR PILOT (deliver recommendation)
+Make a clear recommendation list:
+
+ADD NOW (pilot must-haves)
+- Anything required to reduce onboarding + quest-start confusion
+- Clear success feedback (toast/checkmark) after quest start and action log
+- Basic admin “content switch” if quests need updating (even a JSON config)
+- Safeguarding basics (age gate + reporting route if community features exist)
+- Privacy/consent screen if collecting any personal/health/location data
+
+REMOVE / DISABLE FOR PILOT (unless already stable)
+- Token economy, marketplace, partner APIs, AR modules, complex verification, anything that adds surface area and risk
+- Social feed/community chat if moderation/safeguarding is not production-ready
+- Any half-built screens: replace with “Coming soon” static card
+
+PHASE 6 — OUTPUT DELIVERABLES
+1) “Pilot Readiness Report” (markdown) with:
+   - Summary: Is it ready? What’s still blocking?
+   - Bug table: severity (P0–P3), status, owner, fix link
+   - UX friction fixes done (especially signup + quest start)
+   - Add/Remove list
+   - 10–15 step pilot test plan with acceptance criteria:
+       * Zero P0/P1 bugs
+       * Signup completion rate target improvement (reduce confusion)
+       * Quest start success rate target improvement
+       * No blank screens in core flows
+2) Implement fixes directly in repo with clear commits and notes.
+3) If something cannot be fixed quickly, document workaround + recommended temporary disable.
+
+SEVERITY DEFINITIONS
+- P0: App crash, cannot signup/login, cannot start quest, data loss, security/privacy critical issue.
+- P1: Major flow broken for many users, severe UI confusion preventing progress, persistent blank loading.
+- P2: Annoying but workaround exists, minor data mismatch, performance hiccups.
+- P3: Cosmetic polish.
+
+START NOW
+Begin by running the app and testing signup → quest start. Report first findings fast, then fix P0/P1 issues first.
