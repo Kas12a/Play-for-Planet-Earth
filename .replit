@@ -45,4 +45,6 @@ mockupState = "FULLSTACK"
 [userenv]
 
 [userenv.shared]
-STRAVA_REDIRECT_URI = "https://play4earth.co/api/strava/callback"
+
+[userenv.development]
+STRAVA_REDIRECT_URI = "https://5f9078c6-9987-450c-ae4c-5dddd60d2b9f-00-jpp519ezjrkr.kirk.replit.dev/api/strava/callback"
