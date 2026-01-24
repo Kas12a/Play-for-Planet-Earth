@@ -1,0 +1,52 @@
+Profile screen is empty/blank. This is a pilot-blocking issue. Fix it so Profile always renders a useful UI, even with 0 activities and 0 points.
+
+CONTEXT:
+- Strava OAuth works and /api/strava/status returns connected athlete (per report).
+- Sync can return 0 activities and 0 points if user has no recent Strava activity.
+- Still, Profile must NOT be blank.
+
+TASKS (in order):
+
+1) Reproduce + diagnose:
+- Open Profile in PILOT_MODE with a fresh user (0 activities).
+- Check console/network.
+- Identify which query returns empty (likely Supabase `profiles` fetch) or which conditional render causes blank.
+
+2) Ensure `profiles` row exists for every authenticated user:
+Choose ONE reliable approach (prefer #A):
+A) Add a DB trigger in Supabase:
+- On auth.users INSERT -> insert into public.profiles with id=NEW.id and defaults (display_name, points=0, created_at).
+B) If trigger is not possible, add client-side upsert:
+- On first login/signup, upsert into `profiles` with id=auth.uid() (requires RLS insert/update policies).
+C) Server endpoint:
+- /api/profile/ensure using service role, called after login (only if A/B not feasible).
+
+3) Fix RLS policies for profiles (minimal, safe):
+- Users can SELECT their own profile.
+- Users can INSERT their own profile (if using upsert approach).
+- Users can UPDATE their own profile fields.
+- NO user can read other users’ private profile fields (leaderboard should use display_name only).
+
+4) Make Profile UI resilient:
+- Always render a header and sections with empty-states:
+  - Name: show display_name or fallback “Player”
+  - Points: show 0 if null
+  - Strava: show “Not connected” + button OR “Connected” + athlete firstname/lastname + lastSync
+  - Activity history: show “No verified activities yet. Connect Strava and tap Sync.”
+  - Feedback: button visible
+- Never early-return blank if data missing. Use loading skeleton + empty-state.
+
+5) Connect Strava athlete data to profile:
+- If user connects Strava and profile display_name is empty, set display_name from athlete firstname + last initial.
+- Confirm /api/strava/status displays athlete and lastSync.
+
+6) Verify with a real test:
+- Create new user -> Profile loads (not blank)
+- Connect Strava -> status shows Connected
+- Sync Now:
+   - If no activities, Profile still shows 0 but looks correct.
+   - If activities exist, activity_events rows appear and points_ledger entries exist; Profile shows updated points.
+
+DELIVERABLE:
+- Short report: root cause + fix + DB changes (trigger/policies) + screenshots of Profile empty-state and connected state.
+Do not proceed to publish until Profile is fixed.

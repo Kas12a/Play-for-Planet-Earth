@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/authContext";
+import { useProfile } from "@/lib/useProfile";
 import { useStore, BADGES } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +11,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Shield, Trash2, Download, Share2, Coins, Flame, Star, Trophy, Cloud, GraduationCap, Eye, Wallet } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Settings, Shield, Trash2, Download, Share2, Coins, Flame, Star, Trophy, Cloud, GraduationCap, Eye, Wallet, Activity, Link2, RefreshCw, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+
+interface StravaStatus {
+  connected: boolean;
+  athlete?: {
+    firstname: string;
+    lastname: string;
+    profile?: string;
+  };
+  lastSync?: string;
+}
 
 const badgeIcons: Record<string, any> = {
   star: Star,
@@ -22,14 +36,55 @@ const badgeIcons: Record<string, any> = {
 };
 
 export default function ProfilePage() {
-  const { user, toggleInvestorMode, setFocus } = useStore();
+  const { user: authUser, initialized } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const { user: storeUser, toggleInvestorMode, setFocus } = useStore();
   const { toast } = useToast();
-  const [walletAddress, setWalletAddress] = useState(user?.walletAddress || "");
+  const [, setLocation] = useLocation();
+  
+  const [stravaStatus, setStravaStatus] = useState<StravaStatus | null>(null);
+  const [stravaLoading, setStravaLoading] = useState(true);
+  const [walletAddress, setWalletAddress] = useState("");
 
-  if (!user) return null;
+  useEffect(() => {
+    if (initialized && !authUser) {
+      setLocation("/auth");
+    }
+  }, [initialized, authUser, setLocation]);
+
+  useEffect(() => {
+    async function fetchStravaStatus() {
+      if (!authUser) return;
+      try {
+        const res = await fetch('/api/strava/status', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setStravaStatus(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch Strava status:', err);
+      } finally {
+        setStravaLoading(false);
+      }
+    }
+    fetchStravaStatus();
+  }, [authUser]);
+
+  const user = profile || storeUser || {
+    name: authUser?.email?.split('@')[0] || 'Player',
+    display_name: null,
+    email: authUser?.email || '',
+    credits: 0,
+    points: 0,
+    streak: 0,
+    level: 1,
+    role: 'user',
+    focus: null,
+    created_at: new Date().toISOString(),
+  };
 
   const handleShareImpact = () => {
-    const text = `This week I completed ${user.streak} eco-actions and earned ${user.credits} credits with Play for Planet Earth! 🌍`;
+    const text = `I'm tracking my eco-actions with Play for Planet Earth! 🌍 Join me in making a difference.`;
     if (navigator.share) {
       navigator.share({ text });
     } else {
@@ -48,39 +103,60 @@ export default function ProfilePage() {
 
   const focusOptions = ["Reduce Waste", "Eat Greener", "Move Smarter", "Learn Climate"];
 
+  if (!initialized || profileLoading) {
+    return (
+      <div className="space-y-8 max-w-4xl mx-auto pb-20 md:pb-0">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <Skeleton className="w-24 h-24 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <div className="mt-8 grid grid-cols-3 gap-4 pt-6">
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const displayName = (user as any).display_name || user.name || authUser?.email?.split('@')[0] || 'Player';
+  const createdAt = (user as any).created_at || (user as any).joinedAt;
+  const joinedDate = createdAt ? new Date(createdAt).toLocaleDateString() : 'Recently';
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto pb-20 md:pb-0">
-      {/* Header */}
       <Card className="bg-gradient-to-r from-card to-card/50 border-border overflow-hidden relative">
-        {user.investorMode && (
-          <div className="absolute top-4 right-4">
-            <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">DEMO MODE</Badge>
-          </div>
-        )}
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
+              {stravaStatus?.athlete?.profile ? (
+                <AvatarImage src={stravaStatus.athlete.profile} alt={displayName} />
+              ) : null}
               <AvatarFallback className="text-2xl bg-primary text-primary-foreground font-bold">
-                {user.name?.charAt(0) || 'U'}
+                {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 text-center md:text-left space-y-2">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-                <h1 className="text-3xl font-bold font-display">{user.name || 'Eco Warrior'}</h1>
-                <Badge variant="outline" className="text-xs">{user.role}</Badge>
-                {user.betaAccess && <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-xs">BETA</Badge>}
+                <h1 className="text-3xl font-bold font-display" data-testid="text-profile-name">{displayName}</h1>
+                <Badge variant="outline" className="text-xs">{user.role || 'user'}</Badge>
               </div>
               <div className="text-muted-foreground flex items-center justify-center md:justify-start gap-4 text-sm flex-wrap">
-                <span>Joined {new Date(user.joinedAt).toLocaleDateString()}</span>
-                {user.ageBand && <><span>•</span><span>{user.ageBand}</span></>}
+                <span>Joined {joinedDate}</span>
                 {user.focus && <><span>•</span><span>Focus: {user.focus}</span></>}
               </div>
               <div className="flex items-center justify-center md:justify-start gap-2 mt-2 flex-wrap">
-                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">Level {user.level}</Badge>
-                <Badge variant="outline">Cohort: {user.cohortId || 'None'}</Badge>
+                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">Level {user.level || 1}</Badge>
               </div>
             </div>
-            <Button variant="outline" onClick={handleShareImpact}>
+            <Button variant="outline" onClick={handleShareImpact} data-testid="button-share-impact">
               <Share2 className="w-4 h-4 mr-2" /> Share Impact
             </Button>
           </div>
@@ -89,22 +165,102 @@ export default function ProfilePage() {
             <div className="text-center">
               <div className="flex items-center justify-center gap-1">
                 <Coins className="w-4 h-4 text-primary" />
-                <span className="text-2xl font-bold font-mono">{user.credits}</span>
+                <span className="text-2xl font-bold font-mono" data-testid="text-profile-credits">{user.credits || 0}</span>
               </div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider">Credits</div>
             </div>
             <div className="text-center border-l border-r border-border">
               <div className="flex items-center justify-center gap-1">
                 <Flame className="w-4 h-4 text-orange-500" />
-                <span className="text-2xl font-bold font-mono">{user.streak}</span>
+                <span className="text-2xl font-bold font-mono" data-testid="text-profile-streak">{user.streak || 0}</span>
               </div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider">Day Streak</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold font-mono">{user.points}</div>
+              <div className="text-2xl font-bold font-mono" data-testid="text-profile-points">{user.points || 0}</div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider">Total XP</div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            Strava Connection
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stravaLoading ? (
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          ) : stravaStatus?.connected ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <div className="font-medium" data-testid="text-strava-athlete">
+                    Connected as {stravaStatus.athlete?.firstname} {stravaStatus.athlete?.lastname?.charAt(0)}.
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Last synced: {stravaStatus.lastSync ? new Date(stravaStatus.lastSync).toLocaleString() : 'Never'}
+                  </div>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setLocation('/settings')} data-testid="button-manage-strava">
+                <Settings className="w-4 h-4 mr-2" /> Manage
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-dashed">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <Link2 className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <div className="font-medium">Strava Not Connected</div>
+                  <div className="text-sm text-muted-foreground">Connect to earn verified activity points</div>
+                </div>
+              </div>
+              <Button onClick={() => setLocation('/settings')} data-testid="button-connect-strava">
+                <Link2 className="w-4 h-4 mr-2" /> Connect Strava
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5" />
+            Activity History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(user.points || 0) === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
+              <p className="font-medium">No verified activities yet</p>
+              <p className="text-sm mt-1">Connect Strava and tap Sync to import your activities and earn points.</p>
+              <Button variant="outline" className="mt-4" onClick={() => setLocation('/settings')} data-testid="button-go-to-settings">
+                Go to Settings
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-2xl font-bold">{user.points} XP</p>
+              <p className="text-sm text-muted-foreground mt-1">Total earned from verified activities</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -112,12 +268,12 @@ export default function ProfilePage() {
         <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-8">
           <TabsTrigger value="badges">Badges</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="wallet">Wallet</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
         </TabsList>
 
         <TabsContent value="badges">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {BADGES.map((badge) => {
+            {BADGES.length > 0 ? BADGES.map((badge) => {
               const Icon = badgeIcons[badge.icon] || Shield;
               return (
                 <Card key={badge.id} className={`flex flex-col items-center p-6 text-center transition-colors ${badge.earned ? 'hover:bg-muted/30' : 'opacity-50 border-dashed'}`}>
@@ -131,7 +287,12 @@ export default function ProfilePage() {
                   </Badge>
                 </Card>
               );
-            })}
+            }) : (
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>Complete actions to earn badges!</p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -142,19 +303,6 @@ export default function ProfilePage() {
               <CardDescription>Manage your preferences and data</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm">Demo Mode</h3>
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      <Eye className="w-4 h-4" /> Investor Mode
-                    </div>
-                    <div className="text-xs text-muted-foreground">Show sample data for demonstrations</div>
-                  </div>
-                  <Switch checked={user.investorMode} onCheckedChange={toggleInvestorMode} />
-                </div>
-              </div>
-
               <div className="space-y-4">
                 <h3 className="font-medium text-sm">Focus Area</h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -201,45 +349,24 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="wallet">
+        <TabsContent value="feedback">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Wallet className="w-5 h-5" /> Wallet Address
+                <MessageSquare className="w-5 h-5" />
+                Pilot Feedback
               </CardTitle>
-              <CardDescription>
-                Optional: Connect a wallet address for future tokenisation features.
-              </CardDescription>
+              <CardDescription>Help us improve Play for Planet Earth</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted/50 border border-dashed">
-                <p className="text-sm text-muted-foreground mb-4">
-                  <strong>Note:</strong> Blockchain features are not yet implemented. 
-                  This wallet address is stored for future use when we enable on-chain verification of eco-actions.
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="wallet">Wallet Address (Optional)</Label>
-                  <Input
-                    id="wallet"
-                    placeholder="0x..."
-                    value={walletAddress}
-                    onChange={(e) => setWalletAddress(e.target.value)}
-                  />
-                </div>
-                <Button className="mt-4" variant="outline" onClick={() => {
-                  toast({ title: "Wallet Saved", description: "Your wallet address has been saved for future use." });
-                }}>
-                  Save Wallet Address
+            <CardContent>
+              <div className="text-center py-8">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-primary/50" />
+                <p className="text-muted-foreground mb-4">We'd love to hear your thoughts on the pilot experience!</p>
+                <Button onClick={() => {
+                  toast({ title: "Thank you!", description: "Feedback form coming soon." });
+                }} data-testid="button-share-feedback">
+                  Share Feedback
                 </Button>
-              </div>
-
-              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                <h4 className="font-semibold mb-2 text-sm">Future Tokenisation</h4>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• Transactions will be mirrored on-chain for transparency</li>
-                  <li>• proof_hash field enables verification of action logs</li>
-                  <li>• Credits remain off-chain and cannot be traded or cashed out</li>
-                </ul>
               </div>
             </CardContent>
           </Card>
