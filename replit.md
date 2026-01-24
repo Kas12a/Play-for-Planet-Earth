@@ -13,6 +13,14 @@ A gamified eco-action tracking platform that rewards sustainable behaviors with 
 - Quests and action logs stored in Supabase (not localStorage)
 - Leaderboard reads from database with anonymized names
 - Terms and Privacy pages added
+- OAuth security: HMAC-SHA256 signed state with 10-min expiry
+- Password reset flow: Complete with recovery mode detection
+
+## Verification Status (January 2026)
+- Gate 1: Database schema deployed (activity_sources, activity_events, points_ledger, RLS)
+- Gate 2: Server-side points awarding confirmed (SELECT-only RLS on points_ledger)
+- Gate 3: Strava OAuth tested successfully (CSRF-safe signed state)
+- Gate 4: Activity sync working (fetches from Strava, awards points)
 
 ## Key Files
 
