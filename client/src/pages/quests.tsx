@@ -1,34 +1,106 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QUESTS, Quest } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ArrowRight, CheckCircle, Loader2 } from "lucide-react";
+import { Clock, ArrowRight, CheckCircle, Loader2, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface QuestParticipation {
+  quest_id: string;
+  progress: number;
+  completed: boolean;
+  joined_at: string;
+}
 
 export default function QuestsPage() {
   const { toast } = useToast();
+  const { session } = useAuth();
   const [joinedQuests, setJoinedQuests] = useState<Set<string>>(new Set());
   const [loadingQuest, setLoadingQuest] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (session?.access_token) {
+      fetchMyQuests();
+    } else {
+      setLoading(false);
+    }
+  }, [session]);
+
+  const fetchMyQuests = async () => {
+    try {
+      const response = await fetch('/api/quests/my', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      if (response.ok) {
+        const data: QuestParticipation[] = await response.json();
+        setJoinedQuests(new Set(data.map(p => p.quest_id)));
+      }
+    } catch (error) {
+      console.error('Failed to fetch quest participations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleJoin = async (quest: Quest) => {
     if (joinedQuests.has(quest.id)) return;
     
+    if (!session?.access_token) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to join quests.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoadingQuest(quest.id);
     
-    // Simulate API call with slight delay for UX
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setJoinedQuests(prev => new Set(prev).add(quest.id));
-    setLoadingQuest(null);
-    
-    toast({
-      title: "Quest Joined!",
-      description: `You've joined "${quest.title}". Good luck!`,
-    });
+    try {
+      const response = await fetch(`/api/quests/${quest.id}/join`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join quest');
+      }
+
+      setJoinedQuests(prev => new Set(prev).add(quest.id));
+      
+      toast({
+        title: "Quest Joined!",
+        description: `You've joined "${quest.title}". Good luck!`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to join quest",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingQuest(null);
+    }
   };
 
   const isJoined = (questId: string) => joinedQuests.has(questId);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20 md:pb-0">
@@ -40,7 +112,8 @@ export default function QuestsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {QUESTS.map((quest) => {
           const joined = isJoined(quest.id);
-          const loading = loadingQuest === quest.id;
+          const isLoading = loadingQuest === quest.id;
+          const requiresVerified = quest.requiresVerifiedActivity;
           
           return (
             <Card 
@@ -85,8 +158,11 @@ export default function QuestsPage() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="w-4 h-4 text-primary" />
                   <span>{quest.duration}</span>
-                  {quest.evidenceRequired && (
-                    <Badge variant="outline" className="ml-auto text-[10px]">Evidence required</Badge>
+                  {requiresVerified && (
+                    <Badge variant="outline" className="ml-auto text-[10px] gap-1">
+                      <Shield className="w-3 h-3" />
+                      Verified only
+                    </Badge>
                   )}
                 </div>
               </CardContent>
@@ -95,11 +171,11 @@ export default function QuestsPage() {
                 <Button 
                   className="w-full min-h-[44px]" 
                   onClick={() => handleJoin(quest)}
-                  disabled={joined || loading}
+                  disabled={joined || isLoading}
                   variant={joined ? "outline" : "default"}
                   data-testid={`button-join-quest-${quest.id}`}
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Joining...

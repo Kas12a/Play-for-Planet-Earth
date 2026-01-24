@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useStore, ACTION_TYPES, ActionType } from "@/lib/store";
+import { useState, useEffect } from "react";
+import { ACTION_TYPES, ActionType } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,6 @@ import {
   Recycle,
   ShoppingBag,
   Search,
-  Camera,
   CheckCircle2,
   Coins,
   Bike,
@@ -32,7 +32,9 @@ import {
   Apple,
   Package,
   Wrench,
-  XCircle
+  XCircle,
+  AlertCircle,
+  Info
 } from "lucide-react";
 
 const icons: Record<string, any> = {
@@ -58,6 +60,11 @@ const icons: Record<string, any> = {
   sprout: Sprout,
 };
 
+interface SelfDeclareStatus {
+  dailyPointsRemaining: number;
+  dailyActionsRemaining: number;
+}
+
 export default function ActionsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,22 +73,42 @@ export default function ActionsPage() {
   const [confidence, setConfidence] = useState([0.85]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
-  const { logAction, user } = useStore();
+  const [selfDeclareStatus, setSelfDeclareStatus] = useState<SelfDeclareStatus | null>(null);
+  const { session } = useAuth();
   const { toast } = useToast();
 
   const categories = ["All", "Transport", "Energy", "Food", "Waste"];
+
+  useEffect(() => {
+    if (session?.access_token) {
+      fetchSelfDeclareStatus();
+    }
+  }, [session]);
+
+  const fetchSelfDeclareStatus = async () => {
+    try {
+      const response = await fetch('/api/points/summary', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSelfDeclareStatus({
+          dailyPointsRemaining: data.selfDeclare?.dailyPointsRemaining ?? 10,
+          dailyActionsRemaining: data.selfDeclare?.dailyActionsRemaining ?? 5,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch self-declare status:', error);
+    }
+  };
 
   const filteredActions = ACTION_TYPES.filter(action => {
     const matchesCategory = selectedCategory === "All" || action.category === selectedCategory;
     const matchesSearch = action.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-
-  const getCreditsMultiplier = (conf: number): number => {
-    if (conf >= 0.8) return 1.0;
-    if (conf >= 0.4) return 0.6;
-    return 0.3;
-  };
 
   const getConfidenceTier = (conf: number): string => {
     if (conf >= 0.8) return 'High';
@@ -90,106 +117,165 @@ export default function ActionsPage() {
   };
 
   const handleLogAction = async () => {
-    if (selectedAction && !isLogging) {
-      setIsLogging(true);
+    if (!selectedAction || isLogging) return;
+    
+    if (!session?.access_token) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to log actions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selfDeclareStatus && selfDeclareStatus.dailyActionsRemaining <= 0) {
+      toast({
+        title: "Daily limit reached",
+        description: "You've reached the limit of 5 self-declared actions per day.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLogging(true);
+    
+    try {
+      const clientRequestId = `${selectedAction.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Small delay to simulate API call and prevent double-click
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      logAction(selectedAction.id, logNote, confidence[0]);
-      const multiplier = getCreditsMultiplier(confidence[0]);
-      const creditsEarned = Math.round(selectedAction.baseRewardCredits * multiplier);
-      
+      const response = await fetch('/api/actions/log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          actionTypeId: selectedAction.id,
+          note: logNote || null,
+          confidence: confidence[0],
+          clientRequestId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to log action');
+      }
+
       toast({
         title: "Action Logged!",
-        description: `You earned ${creditsEarned} credits for ${selectedAction.title}.`,
+        description: `You earned ${data.pointsEarned} points for ${selectedAction.title}. (${data.dailyActionsRemaining} actions left today)`,
+      });
+
+      setSelfDeclareStatus({
+        dailyPointsRemaining: data.dailyPointsRemaining,
+        dailyActionsRemaining: data.dailyActionsRemaining,
       });
       
       setIsDialogOpen(false);
       setSelectedAction(null);
       setLogNote("");
       setConfidence([0.85]);
+    } catch (error: any) {
+      toast({
+        title: "Failed to log action",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setIsLogging(false);
     }
   };
 
-  const calculateCredits = (action: ActionType, conf: number) => {
-    const multiplier = getCreditsMultiplier(conf);
-    return Math.round(action.baseRewardCredits * multiplier);
-  };
+  const canSelfDeclare = selfDeclareStatus 
+    ? selfDeclareStatus.dailyActionsRemaining > 0 && selfDeclareStatus.dailyPointsRemaining > 0
+    : true;
 
   return (
-    <div className="space-y-8 pb-20 md:pb-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-display tracking-tight">Action Library</h1>
-          <p className="text-muted-foreground">Log your eco-habits and earn credits.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          {user && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-              <Coins className="w-4 h-4 text-primary" />
-              <span className="font-bold font-mono text-sm">{user.credits}</span>
-            </div>
-          )}
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search actions..." 
-              className="pl-9 bg-card border-border"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <div className="space-y-6 pb-20 md:pb-0">
+      <div>
+        <h1 className="text-3xl font-bold font-display tracking-tight">Log Actions</h1>
+        <p className="text-muted-foreground">Track your eco-friendly activities and earn points.</p>
+      </div>
+
+      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-600">Self-Declared Actions</p>
+            <p className="text-muted-foreground mt-1">
+              These are manual entries with limited points. Connect Strava in Settings for <strong>verified activities</strong> that earn full points!
+            </p>
+            {selfDeclareStatus && (
+              <p className="mt-2 text-xs">
+                Today's remaining: <strong>{selfDeclareStatus.dailyActionsRemaining}</strong> actions, <strong>{selfDeclareStatus.dailyPointsRemaining}</strong> points
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Categories */}
-      <div className="flex flex-wrap gap-2">
-        {categories.map((cat) => (
-          <Button
-            key={cat}
-            variant={selectedCategory === cat ? "default" : "outline"}
-            onClick={() => setSelectedCategory(cat)}
-            className="rounded-full"
-            size="sm"
-          >
-            {cat}
-          </Button>
-        ))}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search actions..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-actions"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {categories.map(cat => (
+            <Button 
+              key={cat} 
+              variant={selectedCategory === cat ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSelectedCategory(cat)}
+              data-testid={`button-category-${cat.toLowerCase()}`}
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredActions.map((action) => {
-          const Icon = icons[action.icon] || Leaf;
+          const IconComponent = icons[action.icon] || Leaf;
+          
           return (
-            <Card key={action.id} className="group hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5 bg-card/50 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div className="text-right">
-                  <Badge variant="secondary" className="font-mono text-xs flex items-center gap-1">
-                    <Coins className="w-3 h-3" /> {action.baseRewardCredits}
+            <Card 
+              key={action.id} 
+              className="hover:shadow-lg hover:shadow-primary/5 transition-all border-border/50"
+              data-testid={`card-action-${action.id}`}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <IconComponent className="w-5 h-5 text-primary" />
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {action.category}
                   </Badge>
                 </div>
+                <CardTitle className="text-lg mt-3">{action.title}</CardTitle>
+                <CardDescription className="text-xs line-clamp-2">
+                  {action.description}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4">
-                  <h3 className="font-bold text-lg mb-1">{action.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{action.description}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Coins className="w-4 h-4 text-primary" />
+                    <span>Up to <strong className="text-foreground">3</strong> pts</span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    Self-declared
+                  </Badge>
                 </div>
                 
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-                  <span className="flex items-center gap-1">
-                    <Leaf className="h-3 w-3" /> {action.impactCO2}kg CO2
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-muted uppercase tracking-wider text-[10px]">
-                    {action.category}
-                  </span>
-                </div>
-
                 <Dialog open={isDialogOpen && selectedAction?.id === action.id} onOpenChange={(open) => {
                   setIsDialogOpen(open);
                   if (!open) {
@@ -200,70 +286,56 @@ export default function ActionsPage() {
                 }}>
                   <DialogTrigger asChild>
                     <Button 
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground" 
-                      variant="outline" 
+                      className="w-full" 
+                      variant="outline"
                       onClick={() => {
                         setSelectedAction(action);
                         setIsDialogOpen(true);
                       }}
+                      disabled={!canSelfDeclare}
+                      data-testid={`button-log-action-${action.id}`}
                     >
-                      Log Action
+                      {canSelfDeclare ? (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" /> Log Action
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="mr-2 h-4 w-4" /> Limit Reached
+                        </>
+                      )}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                      <DialogTitle>Log {action.title}</DialogTitle>
+                      <DialogTitle className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <IconComponent className="w-4 h-4 text-primary" />
+                        </div>
+                        {action.title}
+                      </DialogTitle>
                       <DialogDescription>
-                        Add details to your log. Higher confidence = more credits.
+                        {action.description}
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-4">
-                      <div className="flex items-center justify-center p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted hover:border-primary/50 cursor-pointer transition-colors">
-                        <div className="text-center space-y-2">
-                          <div className="mx-auto w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                            <Camera className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div className="text-sm text-muted-foreground">Add Photo Evidence (Optional)</div>
-                          <div className="text-xs text-primary">Increases verification confidence</div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Verification Confidence</Label>
-                          <Slider
-                            value={confidence}
-                            onValueChange={setConfidence}
-                            max={1}
-                            min={0.1}
-                            step={0.05}
-                            className="py-2"
-                          />
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              Tier: <span className={`font-medium ${confidence[0] >= 0.8 ? 'text-green-500' : confidence[0] >= 0.4 ? 'text-yellow-500' : 'text-red-500'}`}>
-                                {getConfidenceTier(confidence[0])} ({Math.round(confidence[0] * 100)}%)
-                              </span>
-                            </span>
-                            <span className="text-muted-foreground">
-                              Multiplier: {getCreditsMultiplier(confidence[0])}x
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">You'll earn:</span>
-                            <span className="font-bold font-mono text-lg text-primary flex items-center gap-1">
-                              <Coins className="w-4 h-4" />
-                              {calculateCredits(action, confidence[0])} credits
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
+                    <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label htmlFor="note">Note (Optional)</Label>
+                        <Label htmlFor="confidence">Confidence Level: {getConfidenceTier(confidence[0])}</Label>
+                        <Slider
+                          id="confidence"
+                          value={confidence}
+                          onValueChange={setConfidence}
+                          max={1}
+                          min={0}
+                          step={0.05}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          How certain are you that you completed this action?
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="note">Note (optional)</Label>
                         <Textarea 
                           id="note" 
                           placeholder="Any thoughts on this action?" 
@@ -286,7 +358,7 @@ export default function ActionsPage() {
                           </>
                         ) : (
                           <>
-                            <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm & Earn Credits
+                            <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm & Earn Points
                           </>
                         )}
                       </Button>

@@ -16,7 +16,8 @@ import {
   Gift,
   Heart,
   ChartBar,
-  FlaskConical
+  FlaskConical,
+  Settings
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -62,6 +63,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: "Redeem", icon: Gift, href: "/redeem", enabled: config?.ENABLE_MARKETPLACE },
     { label: "Donate", icon: Heart, href: "/donate", enabled: config?.ENABLE_DONATIONS },
     { label: "Profile", icon: UserCircle, href: "/profile", enabled: true },
+    { label: "Settings", icon: Settings, href: "/settings", enabled: true },
   ].filter(item => item.enabled);
 
   if (user?.role === 'admin') {

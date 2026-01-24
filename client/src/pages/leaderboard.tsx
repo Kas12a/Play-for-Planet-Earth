@@ -1,24 +1,40 @@
-import { useStore } from "@/lib/store";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/authContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, Crown, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Trophy, Medal, Crown, Users, Loader2 } from "lucide-react";
+
+interface LeaderboardEntry {
+  rank: number;
+  displayName: string;
+  points: number;
+  level: number;
+}
 
 export default function LeaderboardPage() {
-  const { user, users } = useStore();
+  const { session } = useAuth();
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) return null;
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
 
-  // In pilot mode, only show the current user (no fake users)
-  // Other users will come from Supabase when auth is fully integrated
-  const allUsers = [user, ...users].sort((a, b) => b.points - a.points);
-  
-  // Assign ranks
-  const rankedUsers = allUsers.map((u, index) => ({ ...u, rank: index + 1 }));
-  
-  const hasOtherUsers = users.length > 0;
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch('/api/leaderboard');
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Crown className="w-6 h-6 text-yellow-500 fill-yellow-500" />;
@@ -26,6 +42,16 @@ export default function LeaderboardPage() {
     if (rank === 3) return <Medal className="w-6 h-6 text-amber-700 fill-amber-700" />;
     return <span className="text-muted-foreground font-mono font-bold w-6 text-center">{rank}</span>;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const hasEntries = leaderboard.length > 0;
 
   return (
     <div className="space-y-8">
@@ -36,56 +62,56 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="cohort" className="w-full">
+      <Tabs defaultValue="global" className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-md mb-8">
-          <TabsTrigger value="cohort">Cohort</TabsTrigger>
+          <TabsTrigger value="global">Global</TabsTrigger>
           <TabsTrigger value="friends">Friends</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="cohort">
+        <TabsContent value="global">
           <Card>
             <CardHeader>
-              <CardTitle>Cohort Rankings</CardTitle>
-              <CardDescription>{hasOtherUsers ? 'Weekly reset in 3 days' : 'Your ranking will appear here once more users join'}</CardDescription>
+              <CardTitle>Global Rankings</CardTitle>
+              <CardDescription>
+                {hasEntries 
+                  ? 'Rankings based on verified points earned' 
+                  : 'Your ranking will appear here once more users join'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {!hasOtherUsers && (
+                {!hasEntries && (
                   <div className="text-center py-6 text-muted-foreground">
                     <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm">Be the first to climb the ranks!</p>
                     <p className="text-xs mt-1">More participants will appear as they join the pilot.</p>
                   </div>
                 )}
-                {rankedUsers.map((u) => (
+                {leaderboard.map((entry) => (
                   <div 
-                    key={u.id} 
-                    className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-                      u.id === user.id 
-                        ? 'bg-primary/10 border border-primary/20 shadow-sm' 
-                        : 'bg-card hover:bg-muted/50'
-                    }`}
+                    key={entry.rank} 
+                    className="flex items-center justify-between p-4 rounded-xl transition-all bg-card hover:bg-muted/50"
+                    data-testid={`leaderboard-entry-${entry.rank}`}
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex items-center justify-center w-8">
-                        {getRankIcon(u.rank)}
+                        {getRankIcon(entry.rank)}
                       </div>
                       <Avatar className="border-2 border-background">
                         <AvatarFallback className="bg-muted text-foreground font-bold">
-                          {u.name.charAt(0)}
+                          {entry.displayName.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="font-semibold flex items-center gap-2">
-                          {u.name}
-                          {u.id === user.id && <Badge variant="outline" className="text-[10px] h-5 px-1.5">You</Badge>}
+                          {entry.displayName}
                         </div>
-                        <div className="text-xs text-muted-foreground">Level {u.level} • {u.streak} Day Streak</div>
+                        <div className="text-xs text-muted-foreground">Level {entry.level}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold font-mono text-lg">{u.points.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground uppercase">XP</div>
+                      <div className="font-bold font-mono text-lg">{entry.points.toLocaleString()}</div>
+                      <div className="text-xs text-muted-foreground uppercase">Points</div>
                     </div>
                   </div>
                 ))}
@@ -100,11 +126,11 @@ export default function LeaderboardPage() {
               <div className="bg-muted/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Connect with Friends</h3>
-              <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                Invite friends to compete on the leaderboard and achieve goals together.
+              <h3 className="font-semibold text-lg mb-2">Add Friends</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                Connect with friends to compete on a private leaderboard.
               </p>
-              <Button>Invite Friends</Button>
+              <Badge variant="outline" className="mt-4">Coming Soon</Badge>
             </CardContent>
           </Card>
         </TabsContent>

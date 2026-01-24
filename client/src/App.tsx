@@ -20,6 +20,9 @@ import CreditsPage from "@/pages/credits";
 import RedeemPage from "@/pages/redeem";
 import DonatePage from "@/pages/donate";
 import AdminPage from "@/pages/admin";
+import SettingsPage from "@/pages/settings";
+import TermsPage from "@/pages/terms";
+import PrivacyPage from "@/pages/privacy";
 import ComingSoonPage from "@/pages/coming-soon";
 import NotFound from "@/pages/not-found";
 
@@ -49,6 +52,9 @@ function Router() {
         <Route path="/leaderboard" component={config?.ENABLE_LEADERBOARD ? LeaderboardPage : ComingSoonPage} />
         <Route path="/learn" component={config?.ENABLE_LEARN ? LearnPage : ComingSoonPage} />
         <Route path="/profile" component={ProfilePage} />
+        <Route path="/settings" component={SettingsPage} />
+        <Route path="/terms" component={TermsPage} />
+        <Route path="/privacy" component={PrivacyPage} />
         <Route path="/credits" component={config?.ENABLE_CREDITS ? CreditsPage : ComingSoonPage} />
         <Route path="/redeem" component={config?.ENABLE_MARKETPLACE ? RedeemPage : ComingSoonPage} />
         <Route path="/donate" component={config?.ENABLE_DONATIONS ? DonatePage : ComingSoonPage} />

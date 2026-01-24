@@ -92,6 +92,7 @@ export interface Quest {
   participants?: number;
   image?: string;
   evidenceRequired?: boolean;
+  requiresVerifiedActivity?: boolean;
   progress?: number;
   joined?: boolean;
 }
@@ -157,12 +158,12 @@ export const ACTION_TYPES: ActionType[] = [
 
 // 6 Quests (evidence requirement removed for pilot)
 export const QUESTS: Quest[] = [
-  { id: '1', title: 'Plastic Free July', description: 'Avoid single-use plastics for a whole month. Log daily actions to track progress.', category: 'Global', creditsReward: 500, xpReward: 1000, duration: '30 Days', image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '2', title: 'Bike to Work Week', description: 'Cycle to work or school for 5 days in a row. Track each commute.', category: 'Global', creditsReward: 300, xpReward: 600, duration: '7 Days', image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '3', title: 'Local Park Cleanup', description: 'Join your cohort to clean up the local park.', category: 'Cohort', creditsReward: 200, xpReward: 400, duration: '1 Day', image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '4', title: 'Meatless March', description: 'Go vegetarian for the entire month. Log your plant-based meals.', category: 'Global', creditsReward: 400, xpReward: 800, duration: '31 Days', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '5', title: 'Energy Saver Challenge', description: 'Reduce your home energy use by 20% this month.', category: 'Global', creditsReward: 350, xpReward: 700, duration: '30 Days', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '6', title: 'Community Garden Week', description: 'Volunteer at or start a community garden project.', category: 'Cohort', creditsReward: 250, xpReward: 500, duration: '7 Days', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
+  { id: '1', title: 'Plastic Free July', description: 'Avoid single-use plastics for a whole month. Log daily actions to track progress.', category: 'Global', creditsReward: 500, xpReward: 1000, duration: '30 Days', image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: false },
+  { id: '2', title: 'Bike to Work Week', description: 'Cycle to work or school for 5 days. Connect Strava to track your rides automatically.', category: 'Global', creditsReward: 300, xpReward: 600, duration: '7 Days', image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: true },
+  { id: '3', title: 'Local Park Cleanup', description: 'Join your cohort to clean up the local park.', category: 'Cohort', creditsReward: 200, xpReward: 400, duration: '1 Day', image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: false },
+  { id: '4', title: 'Active Commuter', description: 'Walk, run or cycle 50km total this month. Tracked via connected fitness apps.', category: 'Global', creditsReward: 400, xpReward: 800, duration: '30 Days', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: true },
+  { id: '5', title: 'Energy Saver Challenge', description: 'Reduce your home energy use by 20% this month.', category: 'Global', creditsReward: 350, xpReward: 700, duration: '30 Days', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: false },
+  { id: '6', title: 'Move for the Planet', description: 'Complete 10 hours of verified activity this month. Any movement counts!', category: 'Global', creditsReward: 450, xpReward: 900, duration: '30 Days', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: true },
 ];
 
 // 8 Marketplace Items
