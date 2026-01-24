@@ -1,0 +1,185 @@
+You are a Replit Agent acting as a senior full-stack engineer + QA lead. 
+Mission: put my app into a clean “RESET + PILOT MODE” using Supabase, so we can onboard real users and real partners without demo/fake data.
+
+IMPORTANT: Start by asking me for any Supabase info you need (don’t guess), then proceed step-by-step.
+
+========================
+PHASE 0 — ASK ME FIRST (Supabase + pilot config)
+========================
+Ask me these questions in one message (grouped), wait for my answers, then continue:
+
+A) Supabase project(s)
+1) Do we create a NEW Supabase project for PILOT (recommended) or reuse existing?
+2) Provide:
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY (server-only, keep secret)
+   - (If you need it) SUPABASE_JWT_SECRET (optional; only if verifying JWT manually)
+3) Is Supabase Auth enabled already? Email/password only or also OAuth?
+
+B) Data reset scope
+4) Should PILOT start with ZERO users (fresh), or keep existing test accounts?
+5) Should we wipe all demo content (quests/actions/rewards/credits/transactions/leaderboard) in PILOT?
+
+C) What “Pilot Mode” should include
+6) Confirm which modules must be visible in pilot:
+   - Actions (log action) [YES]
+   - Quests (join/start) [YES]
+   - Leaderboard [YES]
+   - Learn [Optional]
+   - Credits [Optional]
+   - Redeem/Marketplace [Prefer OFF unless real]
+   - Donate [Prefer OFF unless real]
+   - Wallet/Tokenisation [OFF]
+7) Provide initial pilot content:
+   - Number of pilot quests (recommend 5–7)
+   - Number of actions (recommend 20–40)
+   - Any categories you want (Transport, Energy, Food, Waste, Community)
+   - If you have copy/text ready, ask me to paste it; otherwise create placeholders.
+
+D) Admin + feedback
+8) Give me one admin email address (your account) that can manage pilot content.
+9) Where should feedback go?
+   - Store in Supabase table (recommended) and/or send email.
+
+After you collect these, continue.
+
+========================
+PHASE 1 — REPO AUDIT (no big refactors)
+========================
+1) Inspect the repo and identify:
+   - Framework (Expo/React Native/Web), routing, and Supabase client usage
+   - Where fake/demo data comes from:
+     * hardcoded arrays
+     * seed scripts
+     * demo mode flags
+     * scheduled jobs/edge functions
+   - Current tables/models used for: quests, actions, joins, credits, transactions, badges, leaderboard.
+
+2) Run the app locally in Replit:
+   - Install deps
+   - Run dev server
+   - Capture console/network errors
+   - Identify P0/P1 issues.
+
+========================
+PHASE 2 — CREATE “PILOT MODE” FEATURE FLAGS
+========================
+Add environment-driven flags (no breaking changes):
+- PILOT_MODE=true|false
+- DEMO_MODE=true|false
+- ENABLE_MARKETPLACE=false (pilot default)
+- ENABLE_DONATIONS=false (pilot default)
+- ENABLE_WALLET=false (pilot default)
+- ENABLE_PARTNERS=false (until we have partners)
+
+Implementation rules:
+- Never show fake numbers in PILOT mode.
+- If feature disabled, hide nav item OR show a “Coming soon” card (no dead ends).
+- Add a subtle “Pilot Mode” badge in UI header to avoid confusion during testing.
+
+========================
+PHASE 3 — SUPABASE CONNECT + SAFE ENV HANDLING
+========================
+1) Configure Supabase clients properly:
+- Client app uses ANON key with RLS.
+- Server scripts/endpoints (if any) use SERVICE_ROLE_KEY only on server side.
+2) Use Replit Secrets for all keys.
+3) Add a small “/health” or debug screen that confirms Supabase connectivity (non-sensitive).
+
+========================
+PHASE 4 — DATABASE RESET PLAN (clean start)
+========================
+Goal: a real, empty-ish world, with only our curated pilot quests/actions.
+
+A) If NEW PILOT project:
+- Apply schema migrations or recreate tables (match current app expectations).
+- Enable RLS and add minimal policies to let users:
+  * read quests/actions
+  * join quests
+  * log actions
+  * read their own profile/transactions
+  * show leaderboard as anonymised or pseudonymous
+
+B) If REUSING project (only if I explicitly chose it):
+- Create a reset script that:
+  - TRUNCATES public data tables (not auth schema) safely
+  - Deletes demo rows
+  - Resets sequences if needed
+  - Keeps schema intact
+- Must be idempotent (safe to run twice).
+
+Deliverable: a script(s) I can run from Replit:
+- scripts/reset_pilot.ts
+- scripts/seed_pilot.ts
+- scripts/verify_pilot.ts
+
+========================
+PHASE 5 — SEED REAL PILOT CONTENT (minimal but real)
+========================
+Seed only:
+- 5–7 quests (titles, descriptions, start/end dates, reward points/credits)
+- 20–40 actions (name, category, description, points/credits, optional CO2 value)
+- 0 partners by default (empty state should look good)
+
+No fake:
+- joined counts
+- progress percentages
+- leaderboards
+
+Replace any hardcoded “1240 joined / 65%” with computed values:
+- participants_count = COUNT(quest_participants)
+- progress = simple pilot logic (e.g., % of participants who logged >=1 action tied to quest), or show “In progress” until we implement true progress rules.
+
+========================
+PHASE 6 — FIX PILOT-BLOCKING UX + BUGS (signup + quest start)
+========================
+Focus on the two funnels:
+A) Sign-up / onboarding
+- Make primary CTA obvious
+- Prevent confusing misclicks
+- Add loading states + error messages (no blank screens)
+B) Start quest / join quest / log action
+- Increase hit area of buttons
+- Add success toast (e.g., “Quest joined!” / “Action logged!”)
+- Ensure state updates instantly (optimistic UI ok)
+
+Also fix:
+- Scrolling issues (dashboard and other pages)
+- Navigation/back behaviour
+- Any P0/P1 crashes
+
+========================
+PHASE 7 — PILOT FEEDBACK LOOP (must-have)
+========================
+Add a “Feedback” button inside the app:
+- Opens a simple form (message + type: bug/idea/confusing + optional screenshot placeholder)
+- Stores to Supabase table `feedback`
+Fields: id, user_id, screen, type, message, created_at, user_agent/app_version
+If email is easier, do both.
+
+========================
+PHASE 8 — FINAL OUTPUTS
+========================
+1) PILOT READINESS REPORT (markdown) containing:
+- What was reset, what was seeded
+- List of removed/disabled features for pilot
+- Bug list (P0–P3), fixes, links to commits
+- “Pilot must-have checklist” status
+
+2) A short TEST PLAN (10–15 scenarios) + acceptance criteria:
+- Signup success
+- Quest join success
+- Action log success
+- Credits update correct
+- Leaderboard loads
+- No demo/fake data displayed in PILOT_MODE
+- No blank screens, no console errors in core flows
+
+3) Make sure the app can be deployed with PILOT env vars easily:
+- Provide a .env.example template
+- Provide instructions: which secrets to set in Replit + in deployment host
+
+START NOW:
+- Ask me the PHASE 0 questions first, then proceed. 
+- Don’t add large new features; prioritize reset, stability, clarity, and pilot readiness.
