@@ -1,0 +1,86 @@
+We are a PWA. New requirement: points and quests must be mostly API-confirmed. Self-declared tasks must be minimal and capped.
+
+Implement Verified Pilot Mode (PWA) using Supabase + Strava as the first verified activity provider.
+
+PHASE 0 — Ask me for required credentials (one message)
+1) Supabase secrets:
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY (server only)
+2) Strava app secrets (I will create a Strava developer app):
+- STRAVA_CLIENT_ID
+- STRAVA_CLIENT_SECRET
+- STRAVA_REDIRECT_URI (must be HTTPS in production)
+3) Optional (if implementing Strava webhooks now):
+- STRAVA_WEBHOOK_VERIFY_TOKEN (random string)
+- STRAVA_WEBHOOK_SECRET (if Strava provides signing secret; otherwise skip)
+Ask me what our production base URL is so redirect/webhook URLs are correct.
+
+PHASE 1 — Database schema (Supabase)
+Create/verify tables:
+1) activity_sources:
+- id, user_id, provider ('strava'), access_token, refresh_token, expires_at, scopes, created_at
+(Store tokens securely. Never expose to client.)
+2) activity_events:
+- id, user_id, provider, provider_event_id, type, start_time, duration_sec, distance_m, calories, raw_json, created_at
+Add UNIQUE(provider, provider_event_id) to prevent duplicates.
+3) points_ledger (append-only):
+- id, user_id, points, reason, source ('verified_strava'), event_id (fk), created_at
+4) quest_rules (simple for pilot):
+- quest_id, rule_json (e.g., min_duration_weekly, activity_types)
+5) feedback:
+- id, user_id, screen, type, message, created_at
+
+Enable RLS. Policies:
+- Users can read public quests/actions.
+- Users can read only their own activity_sources/activity_events/points_ledger/feedback.
+- Users cannot directly write points_ledger (server-only).
+
+PHASE 2 — OAuth connect flow (PWA-safe)
+1) Add “Connect Strava” button in settings/profile.
+2) On click, redirect to Strava OAuth authorize.
+3) Create server endpoint /api/strava/callback that:
+- exchanges code for access_token + refresh_token + expires_at
+- stores tokens in activity_sources for the authenticated user
+Use Strava token exchange endpoint as per Strava docs.
+Implement refresh flow when expired.
+
+PHASE 3 — Sync activities + scoring (server-side)
+1) Create server job/endpoint /api/strava/sync:
+- fetch recent activities from Strava for the user
+- upsert into activity_events
+2) After inserting new activity_events, award points via points_ledger:
+- Example scoring (pilot):
+  * 1 point per 5 minutes of verified activity, capped 50/day
+  * bonus points for cycling/swimming
+3) Prevent double-awards:
+- points_ledger UNIQUE(user_id, source, event_id)
+
+PHASE 4 — Quest completion based on verified events
+Make most pilot quests depend on activity_events + points_ledger (verified).
+Self-declared actions:
+- Keep them but limit points:
+  * max 10 self-declared points/day
+  * max 5 self-declared actions/week
+Label “Verified” vs “Self-declared” in UI.
+
+PHASE 5 — UI updates
+- Replace any client/localStorage scoring with server-backed points_ledger totals.
+- Leaderboard uses pseudonyms only (no emails).
+- Add “Sync now” button for Strava during pilot.
+
+PHASE 6 — Verification tests (GO/NO-GO)
+Run and report:
+1) New user signup/login works with Supabase Auth.
+2) Connect Strava OAuth works; tokens stored server-side.
+3) Sync pulls activities; inserts into activity_events; awards points in points_ledger.
+4) Leaderboard updates from real totals.
+5) Self-declared caps enforced.
+6) No secrets in client bundle or logs.
+
+Deliverables:
+- Migrations/schema SQL
+- Implemented endpoints
+- Updated UI screens
+- Final GO/NO-GO report with evidence
+Do NOT publish until the above passes.
