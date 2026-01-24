@@ -19,11 +19,13 @@ import {
   FlaskConical,
   Settings
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FeedbackButton from "@/components/feedback-button";
+
+const PUBLIC_PATHS = ['/auth', '/terms', '/privacy'];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -34,6 +36,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const user = profile || storeUser;
+  const isPublicPath = PUBLIC_PATHS.some(path => location.startsWith(path));
+  const isAuthenticated = !!(authUser || storeUser);
+  
+  // Redirect unauthenticated users to auth page
+  useEffect(() => {
+    if (initialized && !isAuthenticated && !isPublicPath) {
+      setLocation('/auth');
+    }
+  }, [initialized, isAuthenticated, isPublicPath, setLocation]);
   
   const handleLogout = async () => {
     await signOut();
@@ -49,8 +60,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!authUser && !storeUser) {
-    return <div className="min-h-screen bg-background text-foreground">{children}</div>;
+  // Render public pages without navigation  
+  if (!isAuthenticated) {
+    if (isPublicPath) {
+      return <div className="min-h-screen bg-background text-foreground">{children}</div>;
+    }
+    // Show loading while redirecting
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   const navItems = [
