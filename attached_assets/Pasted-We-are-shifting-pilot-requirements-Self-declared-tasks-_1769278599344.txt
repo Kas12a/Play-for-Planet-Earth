@@ -1,0 +1,56 @@
+We are shifting pilot requirements:
+- Self-declared tasks must be minimal
+- Points/quests must be based mostly on API-confirmed activity (walking/swimming/biking via watch/phone modules or connected fitness provider)
+Current report says quest join and action log are stored in localStorage and Terms/Privacy pages are missing. This is NOT acceptable for verified pilot.
+
+Goal: implement Verified Pilot Mode V1.2 with Supabase-backed state + server-awarded points.
+
+PHASE 1 — Remove localStorage dependency (pilot-critical)
+1) Replace localStorage storage for:
+   - joined quests
+   - action logs
+with Supabase tables.
+2) Ensure leaderboard reads from Supabase, not client state.
+3) Add unique constraints to prevent duplicates:
+   - quest_participants UNIQUE(user_id, quest_id)
+   - action_logs UNIQUE(user_id, action_id, date_bucket) if needed
+
+PHASE 2 — Server-awarded points ledger (anti-cheat + reliability)
+1) Create points_ledger table (append-only).
+2) Create a server endpoint or Supabase Edge Function:
+   - award_points(user_id, reason, source, points, event_id)
+3) Client must NEVER directly modify credits/points.
+4) Add guards so double-taps cannot award twice.
+
+PHASE 3 — Verified activity ingestion (choose 1 provider first)
+Ask me to choose ONE provider for pilot verification:
+A) Native phone/watch tracking (HealthKit + Google Fit/Health Connect) if app is native
+B) OAuth fitness provider (Strava-like) if app is web/PWA
+Then implement:
+- activity_sources table (provider connection)
+- activity_events table (normalized events)
+- import job (manual “Sync now” button + optional scheduled sync)
+- scoring rules that convert verified events into points_ledger entries
+
+PHASE 4 — Scoring policy: minimize self-declare
+1) Implement policy:
+   - Verified points can be full value
+   - Self-declared actions:
+     * are limited in number and/or daily points cap
+     * are low points
+     * used mainly for non-trackable actions
+2) Add UI labels:
+   - “Verified” badge for API-confirmed activities
+   - “Self-declared” label for manual claims
+3) Make most quests depend on verified activities.
+
+PHASE 5 — Compliance basics
+1) Create simple Terms and Privacy pages (even minimal).
+2) Add consent screen for health/activity data connection.
+
+Deliverables:
+- Updated schema + migrations
+- Updated app flows (join quest, log action, leaderboard) fully Supabase-backed
+- Verified connector implemented for ONE provider
+- GO/NO-GO report for Verified Pilot Mode
+Do not publish until Verified Pilot Mode passes smoke tests.
