@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
-import { useLocation, useSearch } from "wouter";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -22,17 +22,20 @@ export default function AuthPage() {
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const recoveryChecked = useRef(false);
   
-  const { signIn, signUp, resendVerification, resetPassword, updatePassword, user, initialized, session } = useAuth();
+  const { signIn, signUp, resendVerification, resetPassword, updatePassword, user, initialized } = useAuth();
   const [, setLocation] = useLocation();
-  const searchString = useSearch();
 
   useEffect(() => {
-    const params = new URLSearchParams(searchString);
-    if (params.get('type') === 'recovery') {
-      setIsRecoveryMode(true);
+    if (!recoveryChecked.current) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('type') === 'recovery') {
+        setIsRecoveryMode(true);
+      }
+      recoveryChecked.current = true;
     }
-  }, [searchString]);
+  }, []);
 
   useEffect(() => {
     if (initialized && user && !isRecoveryMode) {

@@ -18,7 +18,7 @@ export interface Profile {
 }
 
 export function useProfile() {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

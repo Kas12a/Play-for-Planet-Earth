@@ -1,4 +1,6 @@
 import { useStore, ACTION_TYPES } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
+import { useProfile } from "@/lib/useProfile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -35,16 +37,33 @@ import {
 } from "recharts";
 
 export default function DashboardPage() {
-  const { user, actions, transactions } = useStore();
+  const { user: authUser, initialized } = useAuth();
+  const { profile } = useProfile();
+  const { user: storeUser, actions, transactions } = useStore();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!user) {
+    if (initialized && !authUser) {
       setLocation("/auth");
     }
-  }, [user, setLocation]);
+  }, [authUser, initialized, setLocation]);
 
-  if (!user) return null;
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!authUser) return null;
+
+  const user = profile || storeUser || {
+    name: authUser.email?.split('@')[0] || 'Eco Warrior',
+    credits: 0,
+    streak: 0,
+    points: 0,
+  };
 
   // Mock data calculations
   const weeklyGoal = 500;
