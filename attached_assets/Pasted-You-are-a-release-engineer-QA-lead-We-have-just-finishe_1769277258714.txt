@@ -1,0 +1,136 @@
+You are a release engineer + QA lead. We have just finished “RESET + PILOT MODE” work:
+- Fake/demo data removed
+- Feedback collection added
+- Feature flags added (PILOT_MODE, DEMO_MODE, ENABLE_MARKETPLACE, ENABLE_DONATIONS, ENABLE_WALLET, etc.)
+Now you must verify EVERYTHING is stable and ready to publish live.
+
+DO NOT publish yet.
+First run the complete pre-publish checklist below, fix any P0/P1 issues you find, then give me a clear GO/NO-GO recommendation with evidence.
+
+========================
+PHASE 1 — ENV + CONFIG VALIDATION (must pass)
+========================
+1) Confirm environment variables are set correctly for PILOT:
+- PILOT_MODE=true
+- DEMO_MODE=false
+- ENABLE_MARKETPLACE=false
+- ENABLE_DONATIONS=false
+- ENABLE_WALLET=false
+- SUPABASE_URL present
+- SUPABASE_ANON_KEY present
+- SUPABASE_SERVICE_ROLE_KEY present ONLY in server scripts (not bundled to client)
+2) Confirm build uses the PILOT Supabase project (not DEV).
+3) Confirm no secrets are logged to console (search for “SUPABASE”, “SERVICE_ROLE”, “anon key”, etc.)
+
+Deliverable: print a sanitized env summary (flags only, no keys).
+
+========================
+PHASE 2 — DATABASE + RLS SANITY CHECK (must pass)
+========================
+Using Supabase (SQL / API), verify:
+1) Tables exist + expected columns match app usage (quests, actions, quest_participants, action_logs, profiles, credits/transactions if used, feedback).
+2) RLS is enabled where appropriate.
+3) Policies allow:
+- unauthenticated users: only see public landing content (if any), no protected data
+- authenticated users:
+  * read quests/actions
+  * join quests
+  * log actions
+  * read/update their own profile
+  * read their own credit/transaction history
+  * submit feedback
+4) Confirm leaderboard displays anonymized/pseudonymous identifiers (not emails).
+5) Confirm there is no demo seed job running in PILOT.
+
+Deliverable: a short “RLS & policy verification” section with what you checked.
+
+========================
+PHASE 3 — SMOKE TESTS (manual, record results)
+========================
+Run through the following on BOTH:
+- Desktop browser (PWA) and mobile viewport (responsive)
+- At least Chrome + one other browser if possible
+
+A) Auth & onboarding
+1) Sign up new user → verify email (since verification is ON) → login
+2) Wrong password shows friendly error
+3) Logout works
+4) Session persists after refresh
+5) Password reset flow (if implemented) works
+
+B) Core pilot loop
+6) Home loads with no console errors
+7) Actions page loads list from DB (no fake data)
+8) Log an action:
+   - submit → success toast/confirmation
+   - credits/points update correctly
+   - action appears in history (if you have history)
+9) Quests:
+   - quest list loads from DB
+   - quest detail opens
+   - join/start quest works
+   - joined status persists after refresh
+10) Leaderboard:
+   - loads without errors
+   - shows correct ordering
+   - no PII (no email)
+11) Learn (if enabled):
+   - opens lesson
+   - completion updates (if exists) or stays stable
+
+C) Feature flags / disabled modules
+12) Redeem/Marketplace is hidden OR shows “Coming soon” (no broken screen)
+13) Donate hidden OR “Coming soon”
+14) Wallet hidden OR “Coming soon”
+
+D) Feedback
+15) Feedback form opens
+16) Submitting feedback stores row in `feedback` table (verify in DB)
+17) If email notifications enabled: verify delivery or log the sending status (no secrets)
+
+E) Edge cases
+18) Try poor connection (simulate offline) → app shows graceful error, not blank screen
+19) Double-click/misclick on “Join quest” and “Log action”:
+    - should not create duplicate rows (use unique constraints or server-side guard)
+20) Rate limiting / abuse basics:
+    - user cannot spam credits by repeating same action instantly if rules exist
+    - otherwise log as known issue for pilot
+
+Deliverable: a PASS/FAIL table with notes + screenshots or console snippets where relevant.
+
+========================
+PHASE 4 — PERFORMANCE + ERROR HYGIENE
+========================
+1) Check console for errors/warnings across all main screens.
+2) Confirm loading states exist for slow queries.
+3) Confirm no infinite spinners.
+4) Confirm queries are efficient (basic: no repeated refetch loops).
+Deliverable: list of fixed issues + any remaining non-blockers.
+
+========================
+PHASE 5 — SECURITY + PRIVACY QUICK CHECK
+========================
+1) Ensure RLS prevents:
+- users reading other users’ profiles/transactions
+- users writing credits directly
+2) Ensure feedback table does not store sensitive personal data by default (only message + screen + created_at).
+3) Ensure Terms/Privacy links are accessible from login/signup.
+Deliverable: “Security checks passed / concerns” section.
+
+========================
+PHASE 6 — RELEASE DECISION
+========================
+Classify issues:
+- P0: crash, cannot signup/login/verify email, cannot join quest, cannot log action, data loss, PII leak, RLS failure
+- P1: major flow unreliable, duplicates credits, blank screens
+- P2/P3: minor UX/cosmetic
+
+If any P0 or P1 exists → NO-GO and fix them first.
+If only P2/P3 → GO with a short list of known issues.
+
+FINAL OUTPUT FORMAT
+1) GO/NO-GO
+2) If GO: exact publish steps + which env vars to set in prod
+3) If NO-GO: list of blockers + how to fix
+
+Start now by running PHASE 1 and PHASE 2 first, then do smoke tests. Do not publish until you provide the final report.

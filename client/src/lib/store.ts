@@ -240,36 +240,27 @@ export const useStore = create<AppState>()(
       actions: [],
       transactions: [],
       redemptions: [],
-      users: [
-        { id: '2', email: 'sarah@example.com', name: 'Sarah J.', role: 'user', level: 5, points: 1250, credits: 450, streak: 12, joinedAt: '2023-01-01', cohortId: 'A' },
-        { id: '3', email: 'mike@example.com', name: 'Mike T.', role: 'user', level: 3, points: 800, credits: 220, streak: 3, joinedAt: '2023-02-01', cohortId: 'A' },
-        { id: '4', email: 'emma@example.com', name: 'Emma W.', role: 'user', level: 7, points: 2100, credits: 680, streak: 25, joinedAt: '2023-01-15', cohortId: 'B' },
-        { id: '5', email: 'alex@example.com', name: 'Alex R.', role: 'user', level: 4, points: 950, credits: 310, streak: 8, joinedAt: '2023-03-01', cohortId: 'A' },
-      ],
+      users: [],
 
       login: (email: string) => {
         const role = email.includes('admin') ? 'admin' : 'user';
-        const mockTransactions: CreditTransaction[] = [
-          { id: '1', userId: '1', type: 'EARN', amount: 15, sourceType: 'action_log', confidence: 0.9, clientRequestId: generateUUID(), createdAt: new Date(Date.now() - 86400000).toISOString() },
-          { id: '2', userId: '1', type: 'EARN', amount: 20, sourceType: 'action_log', confidence: 0.85, clientRequestId: generateUUID(), createdAt: new Date(Date.now() - 172800000).toISOString() },
-          { id: '3', userId: '1', type: 'EARN', amount: 25, sourceType: 'lesson_complete', clientRequestId: generateUUID(), createdAt: new Date(Date.now() - 259200000).toISOString() },
-        ];
         
         set({
           user: {
-            id: '1',
+            id: generateUUID(),
             email,
             name: email.split('@')[0],
             role,
-            level: 3,
-            points: 485,
-            credits: 285,
-            streak: 5,
+            level: 1,
+            points: 0,
+            credits: 50,
+            streak: 0,
             joinedAt: new Date().toISOString(),
             betaAccess: true,
             investorMode: false,
           },
-          transactions: mockTransactions
+          transactions: [],
+          actions: [],
         });
       },
 

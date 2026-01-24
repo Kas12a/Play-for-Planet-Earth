@@ -11,11 +11,14 @@ export default function LeaderboardPage() {
 
   if (!user) return null;
 
-  // Combine current user with mock users and sort
+  // In pilot mode, only show the current user (no fake users)
+  // Other users will come from Supabase when auth is fully integrated
   const allUsers = [user, ...users].sort((a, b) => b.points - a.points);
   
   // Assign ranks
   const rankedUsers = allUsers.map((u, index) => ({ ...u, rank: index + 1 }));
+  
+  const hasOtherUsers = users.length > 0;
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Crown className="w-6 h-6 text-yellow-500 fill-yellow-500" />;
@@ -43,10 +46,17 @@ export default function LeaderboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Cohort Rankings</CardTitle>
-              <CardDescription>Weekly reset in 3 days</CardDescription>
+              <CardDescription>{hasOtherUsers ? 'Weekly reset in 3 days' : 'Your ranking will appear here once more users join'}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {!hasOtherUsers && (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Be the first to climb the ranks!</p>
+                    <p className="text-xs mt-1">More participants will appear as they join the pilot.</p>
+                  </div>
+                )}
                 {rankedUsers.map((u) => (
                   <div 
                     key={u.id} 
