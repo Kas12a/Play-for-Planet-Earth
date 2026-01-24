@@ -86,7 +86,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: "Settings", icon: Settings, href: "/settings", enabled: true },
   ].filter(item => item.enabled);
 
-  if (user?.role === 'admin') {
+  // Only show admin nav if profile role is admin (from database, not store)
+  if (profile?.role === 'admin') {
     navItems.push({ label: "Admin", icon: ShieldCheck, href: "/admin", enabled: true });
   }
   

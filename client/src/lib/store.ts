@@ -244,14 +244,13 @@ export const useStore = create<AppState>()(
       users: [],
 
       login: (email: string) => {
-        const role = email.includes('admin') ? 'admin' : 'user';
-        
+        // Role is always 'user' in local store - admin access is controlled by database profile only
         set({
           user: {
             id: generateUUID(),
             email,
             name: email.split('@')[0],
-            role,
+            role: 'user',
             level: 1,
             points: 0,
             credits: 50,
