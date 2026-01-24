@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { useAppConfig } from "@/lib/configContext";
+import { useAuth } from "@/lib/authContext";
+import { useProfile } from "@/lib/useProfile";
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -23,12 +25,30 @@ import { Badge } from "@/components/ui/badge";
 import FeedbackButton from "@/components/feedback-button";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
-  const { user, logout } = useStore();
+  const [location, setLocation] = useLocation();
+  const { user: storeUser, logout: storeLogout } = useStore();
+  const { user: authUser, signOut, initialized } = useAuth();
+  const { profile } = useProfile();
   const { config } = useAppConfig();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  if (!user) {
+  const user = profile || storeUser;
+  
+  const handleLogout = async () => {
+    await signOut();
+    storeLogout();
+    setLocation('/auth');
+  };
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!authUser && !storeUser) {
     return <div className="min-h-screen bg-background text-foreground">{children}</div>;
   }
 
@@ -44,7 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: "Profile", icon: UserCircle, href: "/profile", enabled: true },
   ].filter(item => item.enabled);
 
-  if (user.role === 'admin') {
+  if (user?.role === 'admin') {
     navItems.push({ label: "Admin", icon: ShieldCheck, href: "/admin", enabled: true });
   }
   
@@ -77,7 +97,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Coins className="w-4 h-4 text-primary" />
               <span className="text-sm text-muted-foreground">Credits</span>
             </div>
-            <span className="font-bold font-mono" data-testid="sidebar-credits">{user.credits}</span>
+            <span className="font-bold font-mono" data-testid="sidebar-credits">{user?.credits ?? 0}</span>
           </div>
         </div>
 
@@ -100,12 +120,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-border">
-          {user.investorMode && (
-            <Badge className="w-full mb-3 justify-center bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
-              Demo Mode Active
-            </Badge>
-          )}
-          <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={logout}>
+          <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
             <LogOut size={18} />
             Logout
           </Button>
@@ -125,7 +140,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10">
             <Coins className="w-3 h-3 text-primary" />
-            <span className="font-bold font-mono text-sm">{user.credits}</span>
+            <span className="font-bold font-mono text-sm">{user?.credits ?? 0}</span>
           </div>
           
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -157,7 +172,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 ))}
                 <div className="mt-4 pt-4 border-t border-border">
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-destructive" onClick={logout}>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-destructive" onClick={handleLogout}>
                     <LogOut size={18} />
                     Logout
                   </Button>

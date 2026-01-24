@@ -1,51 +1,152 @@
-import { useState } from "react";
-import { useStore } from "@/lib/store";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Leaf, ArrowRight, Zap } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Leaf, ArrowRight, Loader2, Mail, CheckCircle } from "lucide-react";
 import heroImage from "@assets/generated_images/minimalist_dark_green_and_neon_abstract_topography.png";
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, signup } = useStore();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+  
+  const { signIn, signUp, resendVerification, user, initialized } = useAuth();
   const [, setLocation] = useLocation();
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (initialized && user) {
+      setLocation("/");
+    }
+  }, [user, initialized, setLocation]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      login(email);
-      // Determine if onboarding is needed in real app, but here we just go to dashboard or onboarding
-      // Simulating simple logic:
-      setLocation("/onboarding");
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          setError('Please verify your email before logging in. Check your inbox for the verification link.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please try again.');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setLocation("/");
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      signup(email);
-      setLocation("/onboarding");
+    setError(null);
+    setLoading(true);
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error, needsVerification } = await signUp(email, password);
+      
+      if (error) {
+        if (error.message.includes('already registered')) {
+          setError('This email is already registered. Try logging in instead.');
+        } else {
+          setError(error.message);
+        }
+      } else if (needsVerification) {
+        setVerificationSent(true);
+        setVerificationEmail(email);
+      } else {
+        setLocation("/onboarding");
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const demoLogin = () => {
-    login("demo@example.com");
-    setLocation("/");
+  const handleResendVerification = async () => {
+    setLoading(true);
+    const { error } = await resendVerification(verificationEmail);
+    if (error) {
+      setError(error.message);
+    }
+    setLoading(false);
   };
 
-  const demoAdminLogin = () => {
-    login("admin@example.com");
-    setLocation("/admin");
-  };
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Check your email</CardTitle>
+            <CardDescription>
+              We've sent a verification link to <strong>{verificationEmail}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <CheckCircle className="w-4 h-4" />
+              <AlertDescription>
+                Click the link in your email to verify your account, then return here to log in.
+              </AlertDescription>
+            </Alert>
+            <p className="text-sm text-muted-foreground text-center">
+              Didn't receive the email? Check your spam folder or click below to resend.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleResendVerification}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Resend verification email
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => {
+                setVerificationSent(false);
+                setVerificationEmail("");
+              }}
+            >
+              Back to login
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 relative overflow-hidden">
-      {/* Left Side - Hero */}
       <div className="relative hidden lg:flex flex-col items-center justify-center p-12 bg-sidebar text-foreground overflow-hidden">
         <div 
           className="absolute inset-0 opacity-40 z-0"
@@ -69,7 +170,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Right Side - Form */}
       <div className="flex items-center justify-center p-6 sm:p-12 bg-background relative z-30">
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden text-center mb-8">
@@ -81,18 +181,23 @@ export default function AuthPage() {
 
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="login" data-testid="tab-login">Login</TabsTrigger>
+              <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle>Welcome back</CardTitle>
-                  <CardDescription>Enter your email to access your account</CardDescription>
+                  <CardDescription>Enter your email and password to access your account</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleLogin}>
                   <CardContent className="space-y-4">
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input 
@@ -103,6 +208,7 @@ export default function AuthPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required 
                         className="bg-background/50"
+                        data-testid="input-email"
                       />
                     </div>
                     <div className="space-y-2">
@@ -114,11 +220,20 @@ export default function AuthPage() {
                         onChange={(e) => setPassword(e.target.value)}
                         required 
                         className="bg-background/50"
+                        data-testid="input-password"
                       />
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col gap-2">
-                    <Button type="submit" className="w-full">
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loading}
+                      data-testid="button-login"
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
                       Login <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
                   </CardFooter>
@@ -134,6 +249,11 @@ export default function AuthPage() {
                 </CardHeader>
                 <form onSubmit={handleSignup}>
                   <CardContent className="space-y-4">
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
                       <Input 
@@ -144,6 +264,7 @@ export default function AuthPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required 
                         className="bg-background/50"
+                        data-testid="input-signup-email"
                       />
                     </div>
                     <div className="space-y-2">
@@ -151,15 +272,26 @@ export default function AuthPage() {
                       <Input 
                         id="signup-password" 
                         type="password" 
+                        placeholder="At least 6 characters"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required 
+                        minLength={6}
                         className="bg-background/50"
+                        data-testid="input-signup-password"
                       />
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button type="submit" className="w-full">
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loading}
+                      data-testid="button-signup"
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
                       Get Started <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
                   </CardFooter>
@@ -167,15 +299,6 @@ export default function AuthPage() {
               </Card>
             </TabsContent>
           </Tabs>
-
-           <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" onClick={demoLogin} className="w-full text-xs">
-                <Zap className="mr-2 h-3 w-3" /> Demo User
-              </Button>
-               <Button variant="outline" onClick={demoAdminLogin} className="w-full text-xs">
-                <Zap className="mr-2 h-3 w-3" /> Demo Admin
-              </Button>
-            </div>
 
           <p className="text-center text-sm text-muted-foreground">
             By continuing, you agree to our Terms of Service and Privacy Policy.

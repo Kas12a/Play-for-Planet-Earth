@@ -89,9 +89,9 @@ export interface Quest {
   xpReward: number;
   category: 'Global' | 'Cohort';
   duration: string;
-  participants: number;
+  participants?: number;
   image?: string;
-  evidenceRequired: boolean;
+  evidenceRequired?: boolean;
   progress?: number;
   joined?: boolean;
 }
@@ -155,14 +155,14 @@ export const ACTION_TYPES: ActionType[] = [
   { id: '20', title: 'Zero Waste Shopping', category: 'Waste', baseRewardCredits: 25, impactCO2: 0.4, impactWaste: 0.3, description: 'Shopped with reusable bags/containers', icon: 'shopping-bag' },
 ];
 
-// 6 Quests
+// 6 Quests (evidence requirement removed for pilot)
 export const QUESTS: Quest[] = [
-  { id: '1', title: 'Plastic Free July', description: 'Avoid single-use plastics for a whole month. Log daily actions to track progress.', category: 'Global', creditsReward: 500, xpReward: 1000, duration: '30 Days', participants: 1240, image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, progress: 45, joined: true },
-  { id: '2', title: 'Bike to Work Week', description: 'Cycle to work or school for 5 days in a row. Track each commute.', category: 'Global', creditsReward: 300, xpReward: 600, duration: '7 Days', participants: 850, image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800', evidenceRequired: true, progress: 60, joined: true },
-  { id: '3', title: 'Local Park Cleanup', description: 'Join your cohort to clean up the local park. Submit photo evidence.', category: 'Cohort', creditsReward: 200, xpReward: 400, duration: '1 Day', participants: 45, image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800', evidenceRequired: true },
-  { id: '4', title: 'Meatless March', description: 'Go vegetarian for the entire month. Log your plant-based meals.', category: 'Global', creditsReward: 400, xpReward: 800, duration: '31 Days', participants: 620, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '5', title: 'Energy Saver Challenge', description: 'Reduce your home energy use by 20% this month.', category: 'Global', creditsReward: 350, xpReward: 700, duration: '30 Days', participants: 380, image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
-  { id: '6', title: 'Community Garden Week', description: 'Volunteer at or start a community garden project.', category: 'Cohort', creditsReward: 250, xpReward: 500, duration: '7 Days', participants: 92, image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&q=80&w=800', evidenceRequired: true },
+  { id: '1', title: 'Plastic Free July', description: 'Avoid single-use plastics for a whole month. Log daily actions to track progress.', category: 'Global', creditsReward: 500, xpReward: 1000, duration: '30 Days', image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
+  { id: '2', title: 'Bike to Work Week', description: 'Cycle to work or school for 5 days in a row. Track each commute.', category: 'Global', creditsReward: 300, xpReward: 600, duration: '7 Days', image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
+  { id: '3', title: 'Local Park Cleanup', description: 'Join your cohort to clean up the local park.', category: 'Cohort', creditsReward: 200, xpReward: 400, duration: '1 Day', image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
+  { id: '4', title: 'Meatless March', description: 'Go vegetarian for the entire month. Log your plant-based meals.', category: 'Global', creditsReward: 400, xpReward: 800, duration: '31 Days', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
+  { id: '5', title: 'Energy Saver Challenge', description: 'Reduce your home energy use by 20% this month.', category: 'Global', creditsReward: 350, xpReward: 700, duration: '30 Days', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
+  { id: '6', title: 'Community Garden Week', description: 'Volunteer at or start a community garden project.', category: 'Cohort', creditsReward: 250, xpReward: 500, duration: '7 Days', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&q=80&w=800', evidenceRequired: false },
 ];
 
 // 8 Marketplace Items

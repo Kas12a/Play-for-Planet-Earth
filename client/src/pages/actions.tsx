@@ -65,6 +65,7 @@ export default function ActionsPage() {
   const [logNote, setLogNote] = useState("");
   const [confidence, setConfidence] = useState([0.85]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLogging, setIsLogging] = useState(false);
   const { logAction, user } = useStore();
   const { toast } = useToast();
 
@@ -88,8 +89,13 @@ export default function ActionsPage() {
     return 'Low';
   };
 
-  const handleLogAction = () => {
-    if (selectedAction) {
+  const handleLogAction = async () => {
+    if (selectedAction && !isLogging) {
+      setIsLogging(true);
+      
+      // Small delay to simulate API call and prevent double-click
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       logAction(selectedAction.id, logNote, confidence[0]);
       const multiplier = getCreditsMultiplier(confidence[0]);
       const creditsEarned = Math.round(selectedAction.baseRewardCredits * multiplier);
@@ -98,10 +104,12 @@ export default function ActionsPage() {
         title: "Action Logged!",
         description: `You earned ${creditsEarned} credits for ${selectedAction.title}.`,
       });
+      
       setIsDialogOpen(false);
       setSelectedAction(null);
       setLogNote("");
       setConfidence([0.85]);
+      setIsLogging(false);
     }
   };
 
@@ -265,8 +273,22 @@ export default function ActionsPage() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button onClick={handleLogAction} className="w-full">
-                        <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm & Earn Credits
+                      <Button 
+                        onClick={handleLogAction} 
+                        className="w-full" 
+                        disabled={isLogging}
+                        data-testid="button-confirm-action"
+                      >
+                        {isLogging ? (
+                          <>
+                            <span className="w-4 h-4 mr-2 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                            Logging...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm & Earn Credits
+                          </>
+                        )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
