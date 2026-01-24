@@ -58,12 +58,12 @@ export default function DashboardPage() {
   const totalCO2Saved = weeklyActions.reduce((sum, a) => {
     const action = ACTION_TYPES.find(at => at.id === a.actionId);
     return sum + (action?.impactCO2 || 0);
-  }, 0) || 12.5; // Default for demo
+  }, 0);
 
   const totalWasteAvoided = weeklyActions.reduce((sum, a) => {
     const action = ACTION_TYPES.find(at => at.id === a.actionId);
     return sum + (action?.impactWaste || 0);
-  }, 0) || 2.3;
+  }, 0);
 
   const icons: Record<string, any> = {
     droplet: Droplet,
@@ -76,26 +76,25 @@ export default function DashboardPage() {
     'shopping-bag': ShoppingBag
   };
 
-  const chartData = [
-    { day: "Mon", credits: 40 },
-    { day: "Tue", credits: 80 },
-    { day: "Wed", credits: 20 },
-    { day: "Thu", credits: 90 },
-    { day: "Fri", credits: 50 },
-    { day: "Sat", credits: 100 },
-    { day: "Sun", credits: 40 },
-  ];
+  // Generate chart data from actual transactions
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const today = new Date();
+  const chartData = days.map((day, i) => {
+    const dayStart = new Date(today);
+    dayStart.setDate(today.getDate() - (6 - i));
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+    
+    const dayCredits = transactions
+      .filter(t => t.type === 'EARN' && new Date(t.createdAt) >= dayStart && new Date(t.createdAt) <= dayEnd)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    return { day, credits: dayCredits };
+  });
 
   return (
     <div className="space-y-8 pb-20 md:pb-0">
-      {/* Investor Mode Badge */}
-      {user.investorMode && (
-        <div className="px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center justify-center gap-2">
-          <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">DEMO MODE</Badge>
-          <span className="text-sm text-yellow-500">Viewing sample data for demonstration</span>
-        </div>
-      )}
-
       {/* Welcome & Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 to-card border-primary/20">
@@ -106,12 +105,15 @@ export default function DashboardPage() {
           <CardContent>
             <div className="flex gap-4 mt-2">
               <Link href="/actions">
-                <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105">
+                <Button 
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
+                  data-testid="button-log-action"
+                >
                   <PlusCircle className="mr-2 h-5 w-5" /> Log Action
                 </Button>
               </Link>
               <Link href="/credits">
-                <Button variant="outline">
+                <Button variant="outline" data-testid="button-view-credits">
                   <Coins className="mr-2 h-4 w-4" /> View Credits
                 </Button>
               </Link>
@@ -124,7 +126,7 @@ export default function DashboardPage() {
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
               <Coins className="h-6 w-6 text-primary" />
             </div>
-            <div className="text-3xl font-bold font-mono">{user.credits}</div>
+            <div className="text-3xl font-bold font-mono" data-testid="text-credits-balance">{user.credits}</div>
             <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Credits</div>
           </CardContent>
         </Card>
@@ -177,7 +179,7 @@ export default function DashboardPage() {
                 <TrendingUp className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <div className="text-2xl font-bold font-mono">{weeklyActions.length || 8}</div>
+                <div className="text-2xl font-bold font-mono">{weeklyActions.length}</div>
                 <div className="text-sm text-muted-foreground">Actions this week</div>
               </div>
             </div>

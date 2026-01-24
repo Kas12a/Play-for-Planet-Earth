@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useStore } from "@/lib/store";
+import { useAppConfig } from "@/lib/configContext";
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -12,16 +13,19 @@ import {
   Coins,
   Gift,
   Heart,
-  ChartBar
+  ChartBar,
+  FlaskConical
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import FeedbackButton from "@/components/feedback-button";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useStore();
+  const { config } = useAppConfig();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (!user) {
@@ -29,20 +33,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const navItems = [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/" },
-    { label: "Actions", icon: ListTodo, href: "/actions" },
-    { label: "Quests", icon: Trophy, href: "/quests" },
-    { label: "Leaderboard", icon: ChartBar, href: "/leaderboard" },
-    { label: "Learn", icon: GraduationCap, href: "/learn" },
-    { label: "Credits", icon: Coins, href: "/credits" },
-    { label: "Redeem", icon: Gift, href: "/redeem" },
-    { label: "Donate", icon: Heart, href: "/donate" },
-    { label: "Profile", icon: UserCircle, href: "/profile" },
-  ];
+    { label: "Dashboard", icon: LayoutDashboard, href: "/", enabled: true },
+    { label: "Actions", icon: ListTodo, href: "/actions", enabled: config?.ENABLE_ACTIONS },
+    { label: "Quests", icon: Trophy, href: "/quests", enabled: config?.ENABLE_QUESTS },
+    { label: "Leaderboard", icon: ChartBar, href: "/leaderboard", enabled: config?.ENABLE_LEADERBOARD },
+    { label: "Learn", icon: GraduationCap, href: "/learn", enabled: config?.ENABLE_LEARN },
+    { label: "Credits", icon: Coins, href: "/credits", enabled: config?.ENABLE_CREDITS },
+    { label: "Redeem", icon: Gift, href: "/redeem", enabled: config?.ENABLE_MARKETPLACE },
+    { label: "Donate", icon: Heart, href: "/donate", enabled: config?.ENABLE_DONATIONS },
+    { label: "Profile", icon: UserCircle, href: "/profile", enabled: true },
+  ].filter(item => item.enabled);
 
   if (user.role === 'admin') {
-    navItems.push({ label: "Admin", icon: ShieldCheck, href: "/admin" });
+    navItems.push({ label: "Admin", icon: ShieldCheck, href: "/admin", enabled: true });
   }
+  
+  const isPilotMode = config?.PILOT_MODE;
 
   const isActive = (path: string) => location === path;
 
@@ -50,12 +56,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row font-sans">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-sidebar p-6 fixed h-full z-50">
-        <div className="flex items-center gap-2 mb-8">
+        <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
             <span className="font-bold text-primary-foreground text-sm">P</span>
           </div>
           <span className="text-lg font-bold font-display tracking-tight">Play for Planet</span>
         </div>
+        
+        {isPilotMode && (
+          <div className="mb-4 px-2 py-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center gap-2">
+            <FlaskConical className="w-3 h-3 text-blue-500" />
+            <span className="text-xs font-medium text-blue-500">Pilot Mode</span>
+          </div>
+        )}
 
         {/* Credits Display */}
         <div className="mb-6 p-3 rounded-lg bg-primary/10 border border-primary/20">
@@ -64,7 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Coins className="w-4 h-4 text-primary" />
               <span className="text-sm text-muted-foreground">Credits</span>
             </div>
-            <span className="font-bold font-mono">{user.credits}</span>
+            <span className="font-bold font-mono" data-testid="sidebar-credits">{user.credits}</span>
           </div>
         </div>
 
@@ -77,6 +90,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     ? "bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
+                data-testid={`nav-${item.label.toLowerCase()}`}
               >
                 <item.icon size={18} />
                 <span className="text-sm">{item.label}</span>
@@ -105,7 +119,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="font-bold text-primary-foreground text-sm">P</span>
           </div>
           <span className="font-bold font-display">PfPE</span>
-          {user.investorMode && <Badge variant="outline" className="text-[10px] bg-yellow-500/10 text-yellow-500 border-yellow-500/20">DEMO</Badge>}
+          {isPilotMode && <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">PILOT</Badge>}
         </div>
 
         <div className="flex items-center gap-3">
@@ -159,11 +173,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto max-w-6xl p-4 md:p-8 animate-in fade-in duration-300">
           {children}
         </div>
+        
+        {/* Feedback Button */}
+        {isPilotMode && <FeedbackButton />}
       </main>
 
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-lg p-2 flex justify-around items-center z-50 pb-safe">
-        {[navItems[0], navItems[1], navItems[5], navItems[6], navItems[8]].map((item) => (
+        {navItems
+          .filter(item => ['Dashboard', 'Actions', 'Credits', 'Profile'].includes(item.label))
+          .slice(0, 5)
+          .map((item) => (
            <Link key={item.href} href={item.href}>
             <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${isActive(item.href) ? 'text-primary' : 'text-muted-foreground'}`}>
               <item.icon size={20} />

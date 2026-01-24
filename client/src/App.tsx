@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfigProvider, useAppConfig } from "@/lib/configContext";
 import Layout from "@/components/layout";
 
 // Pages
@@ -18,9 +19,23 @@ import CreditsPage from "@/pages/credits";
 import RedeemPage from "@/pages/redeem";
 import DonatePage from "@/pages/donate";
 import AdminPage from "@/pages/admin";
+import ComingSoonPage from "@/pages/coming-soon";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const { config, loading } = useAppConfig();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-muted-foreground text-sm">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Layout>
       <Switch>
@@ -28,14 +43,14 @@ function Router() {
         <Route path="/onboarding" component={OnboardingPage} />
         
         <Route path="/" component={DashboardPage} />
-        <Route path="/actions" component={ActionsPage} />
-        <Route path="/quests" component={QuestsPage} />
-        <Route path="/leaderboard" component={LeaderboardPage} />
-        <Route path="/learn" component={LearnPage} />
+        <Route path="/actions" component={config?.ENABLE_ACTIONS ? ActionsPage : ComingSoonPage} />
+        <Route path="/quests" component={config?.ENABLE_QUESTS ? QuestsPage : ComingSoonPage} />
+        <Route path="/leaderboard" component={config?.ENABLE_LEADERBOARD ? LeaderboardPage : ComingSoonPage} />
+        <Route path="/learn" component={config?.ENABLE_LEARN ? LearnPage : ComingSoonPage} />
         <Route path="/profile" component={ProfilePage} />
-        <Route path="/credits" component={CreditsPage} />
-        <Route path="/redeem" component={RedeemPage} />
-        <Route path="/donate" component={DonatePage} />
+        <Route path="/credits" component={config?.ENABLE_CREDITS ? CreditsPage : ComingSoonPage} />
+        <Route path="/redeem" component={config?.ENABLE_MARKETPLACE ? RedeemPage : ComingSoonPage} />
+        <Route path="/donate" component={config?.ENABLE_DONATIONS ? DonatePage : ComingSoonPage} />
         <Route path="/admin" component={AdminPage} />
         
         <Route component={NotFound} />
@@ -47,10 +62,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ConfigProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ConfigProvider>
     </QueryClientProvider>
   );
 }
