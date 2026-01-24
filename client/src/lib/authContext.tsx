@@ -15,6 +15,7 @@ interface AuthContextType extends AuthState {
   signOut: () => Promise<void>;
   resendVerification: (email: string) => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -141,14 +142,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth?reset=true`,
+      redirectTo: `${window.location.origin}/auth?type=recovery`,
+    });
+
+    return { error };
+  };
+
+  const updatePassword = async (newPassword: string): Promise<{ error: AuthError | null }> => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      return { error: { message: 'Supabase not configured', name: 'ConfigError' } as AuthError };
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
     });
 
     return { error };
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, signUp, signIn, signOut, resendVerification, resetPassword }}>
+    <AuthContext.Provider value={{ ...state, signUp, signIn, signOut, resendVerification, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

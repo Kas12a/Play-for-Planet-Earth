@@ -1,33 +1,44 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/authContext";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Leaf, ArrowRight, Loader2, Mail, CheckCircle, KeyRound } from "lucide-react";
+import { Leaf, ArrowRight, Loader2, Mail, CheckCircle, KeyRound, Lock } from "lucide-react";
 import heroImage from "@assets/generated_images/minimalist_dark_green_and_neon_abstract_topography.png";
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
   
-  const { signIn, signUp, resendVerification, resetPassword, user, initialized } = useAuth();
+  const { signIn, signUp, resendVerification, resetPassword, updatePassword, user, initialized, session } = useAuth();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
 
   useEffect(() => {
-    if (initialized && user) {
+    const params = new URLSearchParams(searchString);
+    if (params.get('type') === 'recovery') {
+      setIsRecoveryMode(true);
+    }
+  }, [searchString]);
+
+  useEffect(() => {
+    if (initialized && user && !isRecoveryMode) {
       setLocation("/");
     }
-  }, [user, initialized, setLocation]);
+  }, [user, initialized, setLocation, isRecoveryMode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +132,136 @@ export default function AuthPage() {
       setLoading(false);
     }
   };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await updatePassword(password);
+      if (error) {
+        setError(error.message);
+      } else {
+        setPasswordUpdated(true);
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (passwordUpdated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Password updated</CardTitle>
+            <CardDescription>
+              Your password has been successfully updated.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setPasswordUpdated(false);
+                setIsRecoveryMode(false);
+                setPassword("");
+                setConfirmPassword("");
+                setLocation("/auth");
+              }}
+              data-testid="button-continue-to-login"
+            >
+              Continue to login
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isRecoveryMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Set new password</CardTitle>
+            <CardDescription>
+              Enter your new password below.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleUpdatePassword}>
+            <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New password</Label>
+                <Input 
+                  id="new-password" 
+                  type="password" 
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
+                  minLength={6}
+                  className="bg-background/50"
+                  data-testid="input-new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm password</Label>
+                <Input 
+                  id="confirm-password" 
+                  type="password" 
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required 
+                  minLength={6}
+                  className="bg-background/50"
+                  data-testid="input-confirm-password"
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading}
+                data-testid="button-update-password"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Update password
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    );
+  }
 
   if (resetEmailSent) {
     return (
