@@ -6,7 +6,7 @@
 -- ACTIVITY SOURCES (OAuth connections)
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.activity_sources (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   provider TEXT NOT NULL CHECK (provider IN ('strava', 'fitbit', 'google_fit')),
   provider_user_id TEXT,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.activity_sources (
 -- ACTIVITY EVENTS (verified activities)
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.activity_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   provider TEXT NOT NULL,
   provider_event_id TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS public.activity_events (
 -- POINTS LEDGER (append-only, server-controlled)
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.points_ledger (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   points INTEGER NOT NULL,
   reason TEXT NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS public.points_ledger (
 -- SELF-DECLARED CAPS TRACKING
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.self_declare_limits (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   daily_points_used INTEGER DEFAULT 0,
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS public.self_declare_limits (
 -- QUEST RULES (for verified activity requirements)
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.quest_rules (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   quest_id UUID NOT NULL REFERENCES public.quests(id) ON DELETE CASCADE,
   rule_type TEXT NOT NULL CHECK (rule_type IN ('min_duration_weekly', 'min_activities', 'activity_types', 'min_distance')),
   rule_value JSONB NOT NULL,

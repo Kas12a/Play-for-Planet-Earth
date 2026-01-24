@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Leaf, ArrowRight, Loader2, Mail, CheckCircle } from "lucide-react";
+import { Leaf, ArrowRight, Loader2, Mail, CheckCircle, KeyRound } from "lucide-react";
 import heroImage from "@assets/generated_images/minimalist_dark_green_and_neon_abstract_topography.png";
 
 export default function AuthPage() {
@@ -17,8 +17,10 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   
-  const { signIn, signUp, resendVerification, user, initialized } = useAuth();
+  const { signIn, signUp, resendVerification, resetPassword, user, initialized } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -94,6 +96,136 @@ export default function AuthPage() {
     }
     setLoading(false);
   };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    if (!email) {
+      setError('Please enter your email address.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await resetPassword(email);
+      if (error) {
+        setError(error.message);
+      } else {
+        setResetEmailSent(true);
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (resetEmailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <KeyRound className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Check your email</CardTitle>
+            <CardDescription>
+              We've sent a password reset link to <strong>{email}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <CheckCircle className="w-4 h-4" />
+              <AlertDescription>
+                Click the link in your email to reset your password, then return here to log in.
+              </AlertDescription>
+            </Alert>
+            <p className="text-sm text-muted-foreground text-center">
+              Didn't receive the email? Check your spam folder.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="ghost" 
+              className="w-full" 
+              onClick={() => {
+                setResetEmailSent(false);
+                setShowForgotPassword(false);
+              }}
+              data-testid="button-back-to-login-reset"
+            >
+              Back to login
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <KeyRound className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Forgot password?</CardTitle>
+            <CardDescription>
+              Enter your email and we'll send you a link to reset your password.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleForgotPassword}>
+            <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input 
+                  id="reset-email" 
+                  type="email" 
+                  placeholder="you@example.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required 
+                  className="bg-background/50"
+                  data-testid="input-reset-email"
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-2">
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading}
+                data-testid="button-send-reset"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Send reset link
+              </Button>
+              <Button 
+                type="button"
+                variant="ghost" 
+                className="w-full" 
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setError(null);
+                }}
+                data-testid="button-back-to-login"
+              >
+                Back to login
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    );
+  }
 
   if (verificationSent) {
     return (
@@ -212,7 +344,20 @@ export default function AuthPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <button
+                          type="button"
+                          className="text-sm text-primary hover:underline"
+                          onClick={() => {
+                            setShowForgotPassword(true);
+                            setError(null);
+                          }}
+                          data-testid="link-forgot-password"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
                       <Input 
                         id="password" 
                         type="password" 
