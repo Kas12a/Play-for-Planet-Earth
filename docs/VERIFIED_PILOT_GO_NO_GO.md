@@ -6,11 +6,12 @@
 
 ---
 
-## RECOMMENDATION: **CONDITIONAL GO**
+## RECOMMENDATION: **GO FOR PILOT**
 
-The app is ready for Verified Pilot Mode pending:
+The app is ready for Verified Pilot Mode. Before publishing:
 1. Run `scripts/verified_pilot_schema.sql` in Supabase SQL Editor
 2. Test Strava OAuth with a real account
+3. Verify the STRAVA_REDIRECT_URI matches production domain
 
 ---
 
@@ -164,7 +165,7 @@ The app is ready for Verified Pilot Mode pending:
 - [x] Strava tokens stored server-side only
 - [x] Points ledger has no client INSERT policy
 - [x] RLS enabled on all new tables
-- [x] OAuth state includes user ID verification
+- [x] OAuth state uses HMAC-SHA256 with nonce/timestamp (CSRF protected, 10-min expiry)
 - [x] Client_request_id prevents duplicate submissions
 - [x] No secrets in client bundle
 
