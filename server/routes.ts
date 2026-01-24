@@ -10,6 +10,7 @@ import {
   syncStravaActivities,
   getStravaConnection,
   disconnectStrava,
+  verifySignedState,
 } from "./strava";
 
 export async function registerRoutes(
@@ -90,9 +91,8 @@ export async function registerRoutes(
         return res.status(401).json({ error: 'Invalid session' });
       }
 
-      // State contains user ID for callback verification
-      const state = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
-      const authUrl = getStravaAuthUrl(state);
+      // Generate HMAC-signed state to prevent CSRF attacks
+      const authUrl = getStravaAuthUrl(user.id);
 
       res.json({ authUrl });
     } catch (error) {
@@ -114,12 +114,10 @@ export async function registerRoutes(
         return res.redirect('/?strava=error&message=missing_params');
       }
 
-      // Decode state to get user ID
-      let userId: string;
-      try {
-        const decoded = JSON.parse(Buffer.from(String(state), 'base64').toString());
-        userId = decoded.userId;
-      } catch {
+      // Verify HMAC-signed state to prevent CSRF attacks
+      const { userId, valid } = verifySignedState(String(state));
+      if (!valid || !userId) {
+        console.error('Invalid or expired OAuth state');
         return res.redirect('/?strava=error&message=invalid_state');
       }
 

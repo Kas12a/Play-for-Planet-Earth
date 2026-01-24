@@ -1,8 +1,45 @@
 import { supabaseAdmin } from './supabase';
+import crypto from 'crypto';
 
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 const STRAVA_REDIRECT_URI = process.env.STRAVA_REDIRECT_URI || 'https://play4earth.co/api/strava/callback';
+const STATE_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || 'fallback-secret-for-dev';
+
+// Generate HMAC-signed state to prevent CSRF/state forgery
+export function generateSignedState(userId: string): string {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now();
+  const payload = JSON.stringify({ userId, nonce, timestamp });
+  const hmac = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('hex');
+  const signedState = Buffer.from(JSON.stringify({ payload, hmac })).toString('base64');
+  return signedState;
+}
+
+// Verify HMAC-signed state
+export function verifySignedState(state: string): { userId: string; valid: boolean } {
+  try {
+    const decoded = JSON.parse(Buffer.from(state, 'base64').toString());
+    const { payload, hmac } = decoded;
+    
+    // Verify HMAC
+    const expectedHmac = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('hex');
+    if (hmac !== expectedHmac) {
+      return { userId: '', valid: false };
+    }
+    
+    // Verify timestamp (valid for 10 minutes)
+    const parsedPayload = JSON.parse(payload);
+    const timestamp = parsedPayload.timestamp;
+    if (Date.now() - timestamp > 10 * 60 * 1000) {
+      return { userId: '', valid: false };
+    }
+    
+    return { userId: parsedPayload.userId, valid: true };
+  } catch {
+    return { userId: '', valid: false };
+  }
+}
 
 interface StravaTokenResponse {
   token_type: string;
@@ -31,10 +68,13 @@ interface StravaActivity {
   calories?: number;
 }
 
-export function getStravaAuthUrl(state: string): string {
+export function getStravaAuthUrl(userId: string): string {
   if (!STRAVA_CLIENT_ID) {
     throw new Error('STRAVA_CLIENT_ID not configured');
   }
+  
+  // Generate signed state to prevent CSRF attacks
+  const signedState = generateSignedState(userId);
   
   const params = new URLSearchParams({
     client_id: STRAVA_CLIENT_ID,
@@ -42,7 +82,7 @@ export function getStravaAuthUrl(state: string): string {
     response_type: 'code',
     approval_prompt: 'auto',
     scope: 'read,activity:read',
-    state,
+    state: signedState,
   });
   
   return `https://www.strava.com/oauth/authorize?${params.toString()}`;
