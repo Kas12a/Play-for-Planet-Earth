@@ -192,10 +192,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background sticky top-0 z-50">
         <div className="flex items-center gap-2">
-           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="font-bold text-primary-foreground text-sm">P</span>
-          </div>
-          <span className="font-bold font-display">PfPE</span>
+          {(() => {
+            const avatarKey = profile?.avatar_key || 'leaf';
+            const avatar = AVATARS[avatarKey] || AVATARS.leaf;
+            const AvatarIcon = avatar.icon;
+            return (
+              <div className={`w-8 h-8 rounded-full ${avatar.color} flex items-center justify-center`}>
+                <AvatarIcon className="w-4 h-4 text-white" />
+              </div>
+            );
+          })()}
+          <span className="font-bold font-display">Play for Planet Earth</span>
           {isPilotMode && <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">PILOT</Badge>}
         </div>
 
