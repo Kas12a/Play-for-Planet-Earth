@@ -132,7 +132,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/[0.06] bg-gradient-to-b from-sidebar to-black/20 p-6 fixed h-full z-50">
         <div className="flex items-center gap-3 mb-5">
-          {(() => {
+          {profile?.profile_picture_url ? (
+            <img 
+              src={profile.profile_picture_url} 
+              alt="Profile" 
+              className="w-10 h-10 rounded-xl object-cover shadow-lg"
+            />
+          ) : (() => {
             const avatarKey = profile?.avatar_key || 'leaf';
             const avatar = AVATARS[avatarKey] || AVATARS.leaf;
             const AvatarIcon = avatar.icon;
@@ -197,7 +203,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-white/[0.06] bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          {(() => {
+          {profile?.profile_picture_url ? (
+            <img 
+              src={profile.profile_picture_url} 
+              alt="Profile" 
+              className="w-9 h-9 rounded-xl object-cover shadow-lg"
+            />
+          ) : (() => {
             const avatarKey = profile?.avatar_key || 'leaf';
             const avatar = AVATARS[avatarKey] || AVATARS.leaf;
             const AvatarIcon = avatar.icon;
@@ -228,7 +240,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72 bg-gradient-to-b from-sidebar to-black/40 border-r-white/[0.06] p-6">
               <div className="flex items-center gap-3 mb-8">
-                {(() => {
+                {profile?.profile_picture_url ? (
+                  <img 
+                    src={profile.profile_picture_url} 
+                    alt="Profile" 
+                    className="w-12 h-12 rounded-xl object-cover shadow-lg"
+                  />
+                ) : (() => {
                   const avatarKey = profile?.avatar_key || 'leaf';
                   const avatar = AVATARS[avatarKey] || AVATARS.leaf;
                   const AvatarIcon = avatar.icon;

@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { config } from "@shared/config";
 import { supabaseAdmin } from "./supabase";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import {
   getStravaAuthUrl,
   exchangeStravaCode,
@@ -568,6 +569,46 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Leaderboard error:', error);
       res.status(500).json({ error: 'Failed to get leaderboard' });
+    }
+  });
+
+  // Register object storage routes for file uploads
+  registerObjectStorageRoutes(app);
+
+  // Update profile picture
+  app.post("/api/profile/picture", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const token = authHeader.split(' ')[1];
+      
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (authError || !user) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      const { objectPath } = req.body;
+      if (!objectPath) {
+        return res.status(400).json({ error: 'Object path required' });
+      }
+
+      // Update profile with the new picture URL
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ profile_picture_url: objectPath })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Profile picture update error:', updateError);
+        return res.status(500).json({ error: 'Failed to update profile picture' });
+      }
+
+      res.json({ success: true, profilePictureUrl: objectPath });
+    } catch (error) {
+      console.error('Profile picture error:', error);
+      res.status(500).json({ error: 'Failed to update profile picture' });
     }
   });
 

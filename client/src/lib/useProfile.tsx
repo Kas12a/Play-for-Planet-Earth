@@ -23,6 +23,7 @@ export interface Profile {
   name: string | null;
   display_name: string | null;
   avatar_key: string | null;
+  profile_picture_url: string | null;
   role: 'user' | 'admin';
   age_range: AgeRange | null;
   start_mode: StartMode | null;
@@ -76,6 +77,7 @@ export function useProfile() {
             name: user.email?.split('@')[0] || 'User',
             display_name: null,
             avatar_key: null,
+            profile_picture_url: null,
             role: 'user',
             age_range: null,
             start_mode: null,

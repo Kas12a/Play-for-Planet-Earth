@@ -13,9 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings, Shield, Trash2, Download, Share2, Coins, Flame, Star, Trophy, Cloud, GraduationCap, Eye, Wallet, Activity, Link2, RefreshCw, MessageSquare } from "lucide-react";
+import { Settings, Shield, Trash2, Download, Share2, Coins, Flame, Star, Trophy, Cloud, GraduationCap, Eye, Wallet, Activity, Link2, RefreshCw, MessageSquare, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useUpload } from "@/hooks/use-upload";
 
 interface StravaStatus {
   connected: boolean;
@@ -37,8 +38,8 @@ const badgeIcons: Record<string, any> = {
 };
 
 export default function ProfilePage() {
-  const { user: authUser, initialized } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { user: authUser, initialized, session } = useAuth();
+  const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const { user: storeUser, toggleInvestorMode, setFocus } = useStore();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -46,6 +47,33 @@ export default function ProfilePage() {
   const [stravaStatus, setStravaStatus] = useState<StravaStatus | null>(null);
   const [stravaLoading, setStravaLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const { uploadFile } = useUpload({
+    onSuccess: async (response) => {
+      try {
+        const res = await fetch('/api/profile/picture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ objectPath: response.objectPath }),
+        });
+        if (res.ok) {
+          toast({ title: "Profile picture updated!", description: "Your new photo is now visible." });
+          refreshProfile();
+        }
+      } catch (err) {
+        toast({ title: "Upload failed", description: "Could not save profile picture.", variant: "destructive" });
+      } finally {
+        setUploadingPhoto(false);
+      }
+    },
+    onError: () => {
+      setUploadingPhoto(false);
+      toast({ title: "Upload failed", description: "Could not upload photo.", variant: "destructive" });
+    }
+  });
 
   useEffect(() => {
     if (initialized && !authUser) {
@@ -137,14 +165,41 @@ export default function ProfilePage() {
       <Card className="bg-gradient-to-r from-card to-card/50 border-border overflow-hidden relative">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
-              {stravaStatus?.athlete?.profile ? (
-                <AvatarImage src={stravaStatus.athlete.profile} alt={displayName} />
-              ) : null}
-              <AvatarFallback className="text-2xl bg-primary text-primary-foreground font-bold">
-                {displayName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
+                {profile?.profile_picture_url ? (
+                  <AvatarImage src={profile.profile_picture_url} alt={displayName} />
+                ) : stravaStatus?.athlete?.profile ? (
+                  <AvatarImage src={stravaStatus.athlete.profile} alt={displayName} />
+                ) : null}
+                <AvatarFallback className="text-2xl bg-primary text-primary-foreground font-bold">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <label 
+                className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                data-testid="button-upload-photo"
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setUploadingPhoto(true);
+                      uploadFile(file);
+                    }
+                  }}
+                  disabled={uploadingPhoto}
+                />
+                {uploadingPhoto ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </label>
+            </div>
             <div className="flex-1 text-center md:text-left space-y-2">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
                 <h1 className="text-3xl font-bold font-display" data-testid="text-profile-name">{displayName}</h1>
