@@ -18,8 +18,26 @@ import {
   Heart,
   ChartBar,
   FlaskConical,
-  Settings
+  Settings,
+  Leaf,
+  TreePine,
+  Zap,
+  Bike,
+  Recycle,
+  Sparkles,
+  User
 } from "lucide-react";
+
+const AVATARS: Record<string, { icon: typeof Leaf; color: string }> = {
+  leaf: { icon: Leaf, color: 'bg-green-500' },
+  tree: { icon: TreePine, color: 'bg-emerald-600' },
+  zap: { icon: Zap, color: 'bg-yellow-500' },
+  bike: { icon: Bike, color: 'bg-blue-500' },
+  recycle: { icon: Recycle, color: 'bg-teal-500' },
+  heart: { icon: Heart, color: 'bg-pink-500' },
+  sparkles: { icon: Sparkles, color: 'bg-purple-500' },
+  user: { icon: User, color: 'bg-gray-500' },
+};
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -114,10 +132,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-sidebar p-6 fixed h-full z-50">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="font-bold text-primary-foreground text-sm">P</span>
-          </div>
-          <span className="text-lg font-bold font-display tracking-tight">Play for Planet</span>
+          {(() => {
+            const avatarKey = profile?.avatar_key || 'leaf';
+            const avatar = AVATARS[avatarKey] || AVATARS.leaf;
+            const AvatarIcon = avatar.icon;
+            return (
+              <div className={`w-8 h-8 rounded-full ${avatar.color} flex items-center justify-center`}>
+                <AvatarIcon className="w-4 h-4 text-white" />
+              </div>
+            );
+          })()}
+          <span className="text-lg font-bold font-display tracking-tight">play</span>
         </div>
         
         {isPilotMode && (
@@ -188,10 +213,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-sidebar border-r-border p-6">
               <div className="flex items-center gap-2 mb-8">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                  <span className="font-bold text-primary-foreground text-sm">P</span>
-                </div>
-                <span className="text-lg font-bold font-display">Play for Planet</span>
+                {(() => {
+                  const avatarKey = profile?.avatar_key || 'leaf';
+                  const avatar = AVATARS[avatarKey] || AVATARS.leaf;
+                  const AvatarIcon = avatar.icon;
+                  return (
+                    <div className={`w-8 h-8 rounded-full ${avatar.color} flex items-center justify-center`}>
+                      <AvatarIcon className="w-4 h-4 text-white" />
+                    </div>
+                  );
+                })()}
+                <span className="text-lg font-bold font-display">play</span>
               </div>
               <nav className="flex flex-col gap-1">
                 {navItems.map((item) => (
