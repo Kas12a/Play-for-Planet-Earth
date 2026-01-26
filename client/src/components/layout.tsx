@@ -142,7 +142,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             );
           })()}
-          <span className="text-lg font-bold font-display tracking-tight">play</span>
+          <span className="text-lg font-bold font-display tracking-tight">Play for Planet Earth</span>
         </div>
         
         {isPilotMode && (
@@ -223,7 +223,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                   );
                 })()}
-                <span className="text-lg font-bold font-display">play</span>
+                <span className="text-lg font-bold font-display">Play for Planet Earth</span>
               </div>
               <nav className="flex flex-col gap-1">
                 {navItems.map((item) => (
