@@ -7,8 +7,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Leaf, ArrowRight, Loader2, Mail, CheckCircle, KeyRound, Lock } from "lucide-react";
+import { Leaf, ArrowRight, Loader2, Mail, CheckCircle, KeyRound, Lock, Check, X } from "lucide-react";
 import heroImage from "@assets/generated_images/minimalist_dark_green_and_neon_abstract_topography.png";
+
+function validatePassword(password: string) {
+  return {
+    minLength: password.length >= 8,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  };
+}
+
+function isPasswordValid(password: string) {
+  const checks = validatePassword(password);
+  return checks.minLength && checks.hasUppercase && checks.hasLowercase && checks.hasNumber && checks.hasSpecial;
+}
+
+function PasswordRequirements({ password }: { password: string }) {
+  const checks = validatePassword(password);
+  const requirements = [
+    { label: "At least 8 characters", met: checks.minLength },
+    { label: "One uppercase letter", met: checks.hasUppercase },
+    { label: "One lowercase letter", met: checks.hasLowercase },
+    { label: "One number", met: checks.hasNumber },
+    { label: "One special character (!@#$%...)", met: checks.hasSpecial },
+  ];
+
+  return (
+    <div className="mt-2 space-y-1.5 text-xs">
+      {requirements.map((req) => (
+        <div key={req.label} className={`flex items-center gap-1.5 ${req.met ? 'text-primary' : 'text-muted-foreground'}`}>
+          {req.met ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+          <span>{req.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
@@ -73,8 +110,8 @@ export default function AuthPage() {
     setError(null);
     setLoading(true);
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (!isPasswordValid(password)) {
+      setError('Password does not meet all requirements.');
       setLoading(false);
       return;
     }
@@ -142,8 +179,8 @@ export default function AuthPage() {
     setError(null);
     setLoading(true);
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (!isPasswordValid(password)) {
+      setError('Password does not meet all requirements.');
       setLoading(false);
       return;
     }
@@ -226,14 +263,15 @@ export default function AuthPage() {
                 <Input 
                   id="new-password" 
                   type="password" 
-                  placeholder="At least 6 characters"
+                  placeholder="Create a strong password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required 
-                  minLength={6}
+                  minLength={8}
                   className="bg-background/50"
                   data-testid="input-new-password"
                 />
+                {password.length > 0 && <PasswordRequirements password={password} />}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Confirm password</Label>
@@ -566,14 +604,15 @@ export default function AuthPage() {
                       <Input 
                         id="signup-password" 
                         type="password" 
-                        placeholder="At least 6 characters"
+                        placeholder="Create a strong password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required 
-                        minLength={6}
+                        minLength={8}
                         className="bg-background/50"
                         data-testid="input-signup-password"
                       />
+                      {password.length > 0 && <PasswordRequirements password={password} />}
                     </div>
                   </CardContent>
                   <CardFooter>
