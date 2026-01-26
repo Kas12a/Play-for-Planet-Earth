@@ -1,19 +1,42 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './authContext';
 import { getSupabase } from './supabase';
+
+export type AgeRange = '12 - 15' | '16 - 20' | '21 - 28' | '29 - 35' | '36 or older';
+export type StartMode = 'individual' | 'group';
+export type OnboardingStep = 'welcome' | 'auth' | 'profile' | 'mode' | 'interests' | 'permissions' | 'complete';
+
+export const INTEREST_OPTIONS = [
+  'Nature & Outdoors',
+  'Energy Saver',
+  'Movement & Transport',
+  'Waste & Recycling',
+  'Community & Action',
+  'Mindful Living',
+] as const;
+
+export type Interest = typeof INTEREST_OPTIONS[number];
 
 export interface Profile {
   id: string;
   email: string;
   name: string | null;
   display_name: string | null;
+  avatar_key: string | null;
   role: 'user' | 'admin';
+  age_range: AgeRange | null;
+  start_mode: StartMode | null;
+  interests: Interest[] | null;
+  allow_location: boolean;
+  enable_notifications: boolean;
+  onboarding_step: OnboardingStep;
+  onboarding_complete: boolean;
   level: number;
   points: number;
   credits: number;
   streak: number;
   focus: string | null;
-  onboarding_completed: boolean;
+  email_verify_dismissed_at: string | null;
   created_at: string;
 }
 
@@ -23,58 +46,66 @@ export function useProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchProfile() {
-      if (!user) {
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      const supabase = getSupabase();
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          if (error.code === 'PGRST116') {
-            setProfile({
-              id: user.id,
-              email: user.email || '',
-              name: user.email?.split('@')[0] || 'User',
-              display_name: null,
-              role: 'user',
-              level: 1,
-              points: 0,
-              credits: 50,
-              streak: 0,
-              focus: null,
-              onboarding_completed: false,
-              created_at: new Date().toISOString(),
-            });
-          } else {
-            setError(error.message);
-          }
-        } else {
-          setProfile(data);
-        }
-      } catch (err) {
-        setError('Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
+  const fetchProfile = useCallback(async () => {
+    if (!user) {
+      setProfile(null);
+      setLoading(false);
+      return;
     }
 
-    fetchProfile();
+    const supabase = getSupabase();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          setProfile({
+            id: user.id,
+            email: user.email || '',
+            name: user.email?.split('@')[0] || 'User',
+            display_name: null,
+            avatar_key: null,
+            role: 'user',
+            age_range: null,
+            start_mode: null,
+            interests: null,
+            allow_location: false,
+            enable_notifications: false,
+            onboarding_step: 'welcome',
+            onboarding_complete: false,
+            level: 1,
+            points: 0,
+            credits: 0,
+            streak: 0,
+            focus: null,
+            email_verify_dismissed_at: null,
+            created_at: new Date().toISOString(),
+          });
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      setError('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: 'Not authenticated' };
@@ -84,7 +115,7 @@ export function useProfile() {
 
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', user.id);
 
     if (!error && profile) {
@@ -95,20 +126,8 @@ export function useProfile() {
   };
 
   const refreshProfile = async () => {
-    if (!user) return;
-    
-    const supabase = getSupabase();
-    if (!supabase) return;
-
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (data) {
-      setProfile(data);
-    }
+    setLoading(true);
+    await fetchProfile();
   };
 
   return { profile, loading, error, updateProfile, refreshProfile };

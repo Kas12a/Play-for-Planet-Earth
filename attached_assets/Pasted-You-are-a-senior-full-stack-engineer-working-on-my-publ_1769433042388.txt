@@ -1,0 +1,136 @@
+You are a senior full-stack engineer working on my published PWA (Play4Earth). 
+Implement an onboarding flow like the screenshots I shared, with Supabase Auth + Profiles.
+
+DECISIONS LOCKED
+- Age range dropdown options (exact):
+  12 - 15
+  15 - 18
+  16 - 20
+  21 - 28
+  29 - 35
+  35 or older
+- Interests “Skip for now”: ALLOWED
+- Social login buttons: HIDE for now (do not show Apple/Google/Facebook icons)
+
+CORE REQUIREMENTS
+A) Onboarding flow (screens in order)
+1) Welcome screen (marketing text + Continue)
+2) Auth screen:
+   - Tabs: Sign Up / Log In
+   - Email + password
+   - NO social login row/icons
+3) Create Profile:
+   - Avatar select (preset icons) + optional upload photo later (can be placeholder)
+   - Display Name (REQUIRED)
+   - Age Range (REQUIRED, using the exact options above)
+   - Continue
+4) Getting Started:
+   - “Play as an Individual”
+   - “Join a group” (if group system not built, keep screen but route to placeholder “Coming soon” and store start_mode anyway)
+5) Interests:
+   - choose up to 3 topics (store in profile as array)
+   - “Continue” enabled when 3 selected OR user can press “Skip for now”
+6) Permissions:
+   - Toggle “Allow Location” (requests browser geolocation permission when turned ON)
+   - Toggle “Enable Notifications” (requests Notification permission when ON)
+   - Continue
+7) Enter main app
+
+B) Email verification UX (in-app modal after entering app)
+- Email verification must NOT block initial entry after signup.
+- After user lands in app (Home mount), if email not verified:
+  - show modal popup “Verify your email”
+  - buttons: “Send verification email”, “I verified”, “Later”
+  - show a small banner reminder on Home/Profile until verified
+  - re-prompt cadence: every app launch + every 24 hours if dismissed
+- Do not prevent exploring the app, but keep reminding until verified.
+
+C) New users start with ZERO credits/points
+- New users must start with credits=0 and points=0
+- Remove any welcome bonus or auto-credit grants
+- Ensure client cannot set points/credits directly
+
+D) Profile must never be blank
+- Profile screen should always render even if:
+  - onboarding is partial
+  - 0 points
+  - no verified activities
+Show: display_name (or “Player”), age range, interests, verification status, and settings toggles.
+
+PHASE 0 — Ask me for anything you still need (one message)
+Ask only if needed:
+1) Confirm interests list (default use these 6):
+   Nature & Outdoors
+   Energy Saver
+   Movement & Transport
+   Waste & Recycling
+   Community & Action
+   Mindful Living
+2) Confirm whether age range must be validated (e.g., if <12 block). Default: allow only these ranges.
+3) Confirm group mode placeholder text.
+
+Then proceed using defaults if I don’t respond quickly.
+
+PHASE 1 — Supabase schema + RLS
+1) Ensure a `public.profiles` row exists for every auth user:
+   - Prefer DB trigger: on auth.users insert -> insert into public.profiles(id, points=0, credits=0, onboarding_step='welcome')
+2) Ensure profiles fields:
+   - id uuid pk (auth.uid)
+   - display_name text
+   - avatar_key text
+   - age_range text
+   - start_mode text ('individual'|'group')
+   - interests text[] NULL
+   - allow_location boolean default false
+   - enable_notifications boolean default false
+   - onboarding_step text default 'welcome'
+   - onboarding_complete boolean default false
+   - points int default 0
+   - credits int default 0
+   - created_at timestamp default now()
+
+3) RLS:
+   - user can SELECT their own profile
+   - user can UPDATE their own profile fields
+   - If using client-side upsert (not trigger), allow INSERT for own row. Trigger is preferred.
+   - Do NOT allow client to update points/credits (server-only or restricted).
+
+Deliverable: a migration SQL file + steps to run it in Supabase SQL Editor.
+
+PHASE 2 — Routing + gating logic
+1) After auth success:
+   - fetch profile
+   - if onboarding_complete=false, route to onboarding at correct step based on onboarding_step + required fields
+2) Users cannot access main app tabs until Create Profile is completed:
+   - display_name and age_range must be present
+   - start_mode must be present
+3) Interests and Permissions screens are part of onboarding but “Skip for now” is allowed for Interests.
+4) Store onboarding_step each time user proceeds so onboarding can resume after refresh.
+
+PHASE 3 — UI implementation (match the style)
+- Dark theme, rounded cards, neon primary button
+- Big tap targets, clear CTAs, no confusing misclicks
+- Loading states + toasts for errors and saves
+
+PHASE 4 — Email verification modal (non-blocking)
+- On Home mount (and Profile mount):
+  - get user from supabase.auth.getUser()
+  - if email_confirmed_at is null:
+     show modal unless dismissed recently (persist dismissedAt timestamp)
+- Resend button uses:
+  supabase.auth.resend({ type: "signup", email })
+- “I verified” re-fetches user state and hides modal if verified
+
+PHASE 5 — Tests (must pass)
+1) Signup → enter app → onboarding screens show in order → complete → home
+2) Refresh mid-onboarding → resumes at correct step
+3) Email verification modal appears after entering app, not blocking onboarding
+4) Verified users do not see verification modal or banner
+5) New users start credits=0 and points=0 always
+6) Profile never blank; shows placeholders if needed
+7) Location permission toggle works (deny -> store false + show message)
+8) Notification toggle works (deny -> store false + show message)
+9) No console errors / no blank screens in core flow
+
+PHASE 6 — Output
+- Provide: DB migration SQL, code changes summary, screenshots for each onboarding screen, and GO/NO-GO for release.

@@ -1,180 +1,540 @@
-import { useState } from "react";
-import { useStore, AgeBand } from "@/lib/store";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/authContext";
+import { useProfile, AgeRange, StartMode, Interest, INTEREST_OPTIONS, OnboardingStep } from "@/lib/useProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Leaf, User, Users, FileText } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
+import { 
+  Leaf, User, Users, ArrowRight, Loader2, Check, 
+  MapPin, Bell, TreePine, Zap, Bike, Recycle, Heart, Sparkles
+} from "lucide-react";
+import heroImage from "@assets/generated_images/minimalist_dark_green_and_neon_abstract_topography.png";
+
+const AGE_RANGES: AgeRange[] = ['12 - 15', '16 - 20', '21 - 28', '29 - 35', '36 or older'];
+
+const AVATARS = [
+  { key: 'leaf', icon: Leaf, color: 'bg-green-500' },
+  { key: 'tree', icon: TreePine, color: 'bg-emerald-600' },
+  { key: 'zap', icon: Zap, color: 'bg-yellow-500' },
+  { key: 'bike', icon: Bike, color: 'bg-blue-500' },
+  { key: 'recycle', icon: Recycle, color: 'bg-teal-500' },
+  { key: 'heart', icon: Heart, color: 'bg-pink-500' },
+  { key: 'sparkles', icon: Sparkles, color: 'bg-purple-500' },
+  { key: 'user', icon: User, color: 'bg-gray-500' },
+];
+
+const INTEREST_ICONS: Record<Interest, typeof Leaf> = {
+  'Nature & Outdoors': TreePine,
+  'Energy Saver': Zap,
+  'Movement & Transport': Bike,
+  'Waste & Recycling': Recycle,
+  'Community & Action': Users,
+  'Mindful Living': Heart,
+};
+
+const STEP_ORDER: OnboardingStep[] = ['welcome', 'profile', 'mode', 'interests', 'permissions', 'complete'];
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(1);
-  const { user, completeOnboarding } = useStore();
+  const { user, initialized } = useAuth();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [, setLocation] = useLocation();
-
+  
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    ageBand: "" as AgeBand,
-    parentEmail: "",
-    cohortCode: "",
-    acceptedTerms: false
+    display_name: '',
+    avatar_key: 'leaf',
+    age_range: '' as AgeRange | '',
+    start_mode: '' as StartMode | '',
+    interests: [] as Interest[],
+    allow_location: false,
+    enable_notifications: false,
   });
 
-  const totalSteps = 3;
+  useEffect(() => {
+    if (initialized && !user) {
+      setLocation('/auth');
+    }
+  }, [initialized, user, setLocation]);
 
-  const handleNext = () => {
-    if (step < totalSteps) {
-      setStep(step + 1);
+  useEffect(() => {
+    if (profile) {
+      if (profile.onboarding_complete) {
+        setLocation('/');
+        return;
+      }
+      
+      const savedStep = profile.onboarding_step || 'welcome';
+      if (STEP_ORDER.includes(savedStep)) {
+        setCurrentStep(savedStep);
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        display_name: profile.display_name || prev.display_name,
+        avatar_key: profile.avatar_key || prev.avatar_key,
+        age_range: profile.age_range || prev.age_range,
+        start_mode: profile.start_mode || prev.start_mode,
+        interests: profile.interests || prev.interests,
+        allow_location: profile.allow_location || prev.allow_location,
+        enable_notifications: profile.enable_notifications || prev.enable_notifications,
+      }));
+    }
+  }, [profile, setLocation]);
+
+  const stepIndex = STEP_ORDER.indexOf(currentStep);
+  const totalSteps = STEP_ORDER.length - 1;
+  const progress = ((stepIndex) / totalSteps) * 100;
+
+  const saveAndNext = async (nextStep: OnboardingStep, updates: Record<string, unknown> = {}) => {
+    setSaving(true);
+    setError(null);
+    
+    const { error } = await updateProfile({
+      ...updates,
+      onboarding_step: nextStep,
+    } as never);
+    
+    if (error) {
+      setError(error);
+      setSaving(false);
+      return;
+    }
+    
+    setSaving(false);
+    setCurrentStep(nextStep);
+  };
+
+  const completeOnboarding = async () => {
+    setSaving(true);
+    setError(null);
+    
+    const { error } = await updateProfile({
+      allow_location: formData.allow_location,
+      enable_notifications: formData.enable_notifications,
+      onboarding_step: 'complete',
+      onboarding_complete: true,
+    });
+    
+    if (error) {
+      setError(error);
+      setSaving(false);
+      return;
+    }
+    
+    setLocation('/');
+  };
+
+  const handleLocationToggle = async (enabled: boolean) => {
+    if (enabled) {
+      try {
+        const result = await navigator.permissions.query({ name: 'geolocation' });
+        if (result.state === 'denied') {
+          setFormData(prev => ({ ...prev, allow_location: false }));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          () => setFormData(prev => ({ ...prev, allow_location: true })),
+          () => setFormData(prev => ({ ...prev, allow_location: false }))
+        );
+      } catch {
+        setFormData(prev => ({ ...prev, allow_location: false }));
+      }
     } else {
-      completeOnboarding({
-        name: formData.name,
-        ageBand: formData.ageBand,
-        parentEmail: formData.ageBand === 'Under 16' ? formData.parentEmail : undefined,
-        cohortId: formData.cohortCode ? 'custom-cohort' : undefined,
-      });
-      setLocation("/");
+      setFormData(prev => ({ ...prev, allow_location: false }));
     }
   };
 
-  const isStepValid = () => {
-    if (step === 1) return formData.name.length > 0 && formData.ageBand;
-    if (step === 2) return formData.ageBand !== 'Under 16' || formData.parentEmail.includes('@');
-    if (step === 3) return formData.acceptedTerms;
-    return false;
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (enabled) {
+      try {
+        const permission = await Notification.requestPermission();
+        setFormData(prev => ({ ...prev, enable_notifications: permission === 'granted' }));
+      } catch {
+        setFormData(prev => ({ ...prev, enable_notifications: false }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, enable_notifications: false }));
+    }
   };
 
+  const toggleInterest = (interest: Interest) => {
+    setFormData(prev => {
+      const current = prev.interests;
+      if (current.includes(interest)) {
+        return { ...prev, interests: current.filter(i => i !== interest) };
+      }
+      if (current.length >= 3) return prev;
+      return { ...prev, interests: [...current, interest] };
+    });
+  };
+
+  if (!initialized || profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
-      <div className="w-full max-w-md space-y-8">
-        <div className="space-y-2">
-          <Progress value={(step / totalSteps) * 100} className="h-2" />
-          <p className="text-right text-xs text-muted-foreground">Step {step} of {totalSteps}</p>
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background relative overflow-hidden">
+      <div 
+        className="absolute inset-0 opacity-20 z-0"
+        style={{ 
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-background/70 z-0" />
+      
+      <div className="w-full max-w-md space-y-6 relative z-10">
+        {currentStep !== 'welcome' && currentStep !== 'complete' && (
+          <div className="space-y-2">
+            <Progress value={progress} className="h-2" />
+            <p className="text-right text-xs text-muted-foreground">
+              Step {stepIndex} of {totalSteps}
+            </p>
+          </div>
+        )}
 
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          {step === 1 && (
-            <>
-              <CardHeader>
-                <CardTitle>Tell us about you</CardTitle>
-                <CardDescription>Let's set up your profile.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Display Name</Label>
-                  <Input 
-                    id="name" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="EcoWarrior123"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Age Group</Label>
-                  <RadioGroup 
-                    value={formData.ageBand} 
-                    onValueChange={(val) => setFormData({...formData, ageBand: val as AgeBand})}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    {['Under 16', '16-18', '19-30', '31+'].map((age) => (
-                      <div key={age}>
-                        <RadioGroupItem value={age} id={age} className="peer sr-only" />
-                        <Label 
-                          htmlFor={age}
-                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer transition-all"
-                        >
-                          <User className="mb-2 h-6 w-6" />
-                          {age}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              </CardContent>
-            </>
-          )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-          {step === 2 && (
-            <>
-              <CardHeader>
-                <CardTitle>Join a Cohort</CardTitle>
-                <CardDescription>Are you part of a school or organization?</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {formData.ageBand === 'Under 16' && (
-                  <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-200 text-sm mb-4">
-                    <p className="font-semibold mb-1">Parent Consent Required</p>
-                    <p>Since you are under 16, we need a parent or guardian's email to verify your account.</p>
-                    <div className="mt-3">
-                      <Label htmlFor="parentEmail">Parent/Guardian Email</Label>
-                      <Input 
-                        id="parentEmail" 
-                        type="email"
-                        value={formData.parentEmail}
-                        onChange={(e) => setFormData({...formData, parentEmail: e.target.value})}
-                        placeholder="parent@example.com"
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
+        {currentStep === 'welcome' && (
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-4">
+              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(34,197,94,0.4)]">
+                <Leaf className="w-10 h-10 text-primary-foreground" />
+              </div>
+              <CardTitle className="text-3xl font-display">Play for Planet Earth</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Turn everyday eco-actions into verified impact. Connect your fitness apps, 
+                join challenges, and help make a difference.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center text-sm text-muted-foreground">
+              <p>Earn points for sustainable choices</p>
+              <p>Track your real environmental impact</p>
+              <p>Join a global community of changemakers</p>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                className="w-full text-lg py-6" 
+                onClick={() => saveAndNext('profile')}
+                disabled={saving}
+                data-testid="button-welcome-continue"
+              >
+                {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                Get Started <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
+
+        {currentStep === 'profile' && (
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>Create Your Profile</CardTitle>
+              <CardDescription>Tell us a bit about yourself</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Choose an Avatar</Label>
+                <div className="grid grid-cols-4 gap-3">
+                  {AVATARS.map(({ key, icon: Icon, color }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, avatar_key: key }))}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${color} ${
+                        formData.avatar_key === key 
+                          ? 'ring-4 ring-primary ring-offset-2 ring-offset-background scale-110' 
+                          : 'opacity-70 hover:opacity-100'
+                      }`}
+                      data-testid={`avatar-${key}`}
+                    >
+                      <Icon className="w-7 h-7 text-white" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="display_name">Display Name *</Label>
+                <Input 
+                  id="display_name" 
+                  value={formData.display_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
+                  placeholder="EcoWarrior"
+                  className="bg-background/50"
+                  data-testid="input-display-name"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <Label>Age Range *</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {AGE_RANGES.map((age) => (
+                    <button
+                      key={age}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, age_range: age }))}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${
+                        formData.age_range === age 
+                          ? 'border-primary bg-primary/10 text-primary' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      data-testid={`age-${age}`}
+                    >
+                      {age}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                className="w-full" 
+                onClick={() => saveAndNext('mode', {
+                  display_name: formData.display_name,
+                  avatar_key: formData.avatar_key,
+                  age_range: formData.age_range,
+                })}
+                disabled={saving || !formData.display_name || !formData.age_range}
+                data-testid="button-profile-continue"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Continue <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
+
+        {currentStep === 'mode' && (
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>How will you play?</CardTitle>
+              <CardDescription>Choose your journey</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, start_mode: 'individual' }))}
+                className={`w-full p-6 rounded-xl border-2 text-left transition-all flex items-start gap-4 ${
+                  formData.start_mode === 'individual' 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+                data-testid="mode-individual"
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  formData.start_mode === 'individual' ? 'bg-primary' : 'bg-muted'
+                }`}>
+                  <User className={`w-6 h-6 ${
+                    formData.start_mode === 'individual' ? 'text-primary-foreground' : 'text-muted-foreground'
+                  }`} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg">Play as an Individual</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Track your personal eco-actions and compete on the global leaderboard
+                  </p>
+                </div>
+                {formData.start_mode === 'individual' && (
+                  <Check className="w-6 h-6 text-primary flex-shrink-0" />
                 )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="cohort">Cohort Code (Optional)</Label>
-                  <Input 
-                    id="cohort" 
-                    value={formData.cohortCode}
-                    onChange={(e) => setFormData({...formData, cohortCode: e.target.value})}
-                    placeholder="e.g. SCHOOL-2024"
-                  />
-                  <p className="text-xs text-muted-foreground">If you don't have one, you can skip this.</p>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, start_mode: 'group' }))}
+                className={`w-full p-6 rounded-xl border-2 text-left transition-all flex items-start gap-4 ${
+                  formData.start_mode === 'group' 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+                data-testid="mode-group"
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  formData.start_mode === 'group' ? 'bg-primary' : 'bg-muted'
+                }`}>
+                  <Users className={`w-6 h-6 ${
+                    formData.start_mode === 'group' ? 'text-primary-foreground' : 'text-muted-foreground'
+                  }`} />
                 </div>
-              </CardContent>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <CardHeader>
-                <CardTitle>Final Steps</CardTitle>
-                <CardDescription>Review and agree to our terms.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="rounded-md border border-border p-4 h-40 overflow-y-auto text-sm text-muted-foreground bg-background/50">
-                  <h4 className="font-semibold mb-2">Terms of Service</h4>
-                  <p>Welcome to PfPE. By using this app, you agree to track your eco-actions honestly...</p>
-                  <p className="mt-2">Privacy: We collect minimal data to run the game...</p>
-                  {/* Truncated for mock */}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg">Join a Group</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Team up with friends, school, or organization
+                  </p>
                 </div>
+                {formData.start_mode === 'group' && (
+                  <Check className="w-6 h-6 text-primary flex-shrink-0" />
+                )}
+              </button>
+              
+              {formData.start_mode === 'group' && (
+                <Alert className="bg-amber-500/10 border-amber-500/20">
+                  <AlertDescription className="text-amber-200">
+                    Group features are coming soon! We'll save your preference and notify you when available.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+            <CardFooter className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep('profile')}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={() => saveAndNext('interests', { start_mode: formData.start_mode })}
+                disabled={saving || !formData.start_mode}
+                data-testid="button-mode-continue"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Continue <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="terms" 
-                    checked={formData.acceptedTerms}
-                    onCheckedChange={(c) => setFormData({...formData, acceptedTerms: c as boolean})}
-                  />
-                  <Label htmlFor="terms" className="text-sm font-normal">
-                    I agree to the Terms of Service and Privacy Policy
-                  </Label>
+        {currentStep === 'interests' && (
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>What interests you?</CardTitle>
+              <CardDescription>Choose up to 3 topics (required)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {INTEREST_OPTIONS.map((interest) => {
+                  const Icon = INTEREST_ICONS[interest];
+                  const isSelected = formData.interests.includes(interest);
+                  const isDisabled = !isSelected && formData.interests.length >= 3;
+                  
+                  return (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => toggleInterest(interest)}
+                      disabled={isDisabled}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        isSelected 
+                          ? 'border-primary bg-primary/10' 
+                          : isDisabled
+                          ? 'border-border/50 opacity-50 cursor-not-allowed'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      data-testid={`interest-${interest.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <Icon className={`w-6 h-6 mb-2 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <p className="text-sm font-medium">{interest}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <p className="text-sm text-muted-foreground text-center">
+                {formData.interests.length}/3 selected
+              </p>
+            </CardContent>
+            <CardFooter className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep('mode')}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={() => saveAndNext('permissions', { interests: formData.interests })}
+                disabled={saving || formData.interests.length === 0}
+                data-testid="button-interests-continue"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Continue <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
+
+        {currentStep === 'permissions' && (
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>Permissions</CardTitle>
+              <CardDescription>These help personalize your experience (optional)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Location</p>
+                    <p className="text-xs text-muted-foreground">For local challenges & events</p>
+                  </div>
                 </div>
-              </CardContent>
-            </>
-          )}
-
-          <CardFooter className="flex justify-between">
-            {step > 1 ? (
-              <Button variant="outline" onClick={() => setStep(step - 1)}>Back</Button>
-            ) : (
-              <div></div>
-            )}
-            <Button onClick={handleNext} disabled={!isStepValid()}>
-              {step === totalSteps ? "Finish" : "Next"}
-            </Button>
-          </CardFooter>
-        </Card>
+                <Switch
+                  checked={formData.allow_location}
+                  onCheckedChange={handleLocationToggle}
+                  data-testid="switch-location"
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <Bell className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Notifications</p>
+                    <p className="text-xs text-muted-foreground">Quest reminders & updates</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={formData.enable_notifications}
+                  onCheckedChange={handleNotificationToggle}
+                  data-testid="switch-notifications"
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep('interests')}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={completeOnboarding}
+                disabled={saving}
+                data-testid="button-permissions-continue"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Enter App <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
       </div>
     </div>
   );
