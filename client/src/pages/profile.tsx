@@ -83,21 +83,32 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function fetchStravaStatus() {
-      if (!authUser) return;
+      if (!authUser || !session?.access_token) {
+        setStravaLoading(false);
+        return;
+      }
       try {
-        const res = await fetch('/api/strava/status', { credentials: 'include' });
+        const res = await fetch('/api/strava/status', { 
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           setStravaStatus(data);
+        } else {
+          setStravaStatus({ connected: false });
         }
       } catch (err) {
         console.error('Failed to fetch Strava status:', err);
+        setStravaStatus({ connected: false });
       } finally {
         setStravaLoading(false);
       }
     }
     fetchStravaStatus();
-  }, [authUser]);
+  }, [authUser, session?.access_token]);
 
   const user = profile || storeUser || {
     name: authUser?.email?.split('@')[0] || 'Player',
@@ -132,22 +143,22 @@ export default function ProfilePage() {
 
   const focusOptions = ["Reduce Waste", "Eat Greener", "Move Smarter", "Learn Climate"];
 
-  if (!initialized || profileLoading) {
+  if (!initialized || (profileLoading && !profile)) {
     return (
-      <div className="space-y-8 max-w-4xl mx-auto pb-20 md:pb-0">
+      <div className="space-y-4 sm:space-y-8 max-w-4xl mx-auto pb-24 md:pb-0 px-2 sm:px-0">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <Skeleton className="w-24 h-24 rounded-full" />
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">
+              <Skeleton className="w-20 h-20 sm:w-24 sm:h-24 rounded-full" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 sm:h-8 w-40 sm:w-48" />
+                <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
               </div>
             </div>
-            <div className="mt-8 grid grid-cols-3 gap-4 pt-6">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
+            <div className="mt-6 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-4 pt-4 sm:pt-6">
+              <Skeleton className="h-12 sm:h-16" />
+              <Skeleton className="h-12 sm:h-16" />
+              <Skeleton className="h-12 sm:h-16" />
             </div>
           </CardContent>
         </Card>
@@ -160,13 +171,13 @@ export default function ProfilePage() {
   const joinedDate = createdAt ? new Date(createdAt).toLocaleDateString() : 'Recently';
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto pb-20 md:pb-0">
+    <div className="space-y-4 sm:space-y-8 max-w-4xl mx-auto pb-24 md:pb-0 px-2 sm:px-0">
       <EmailVerificationBanner />
       <Card className="bg-gradient-to-r from-card to-card/50 border-border overflow-hidden relative">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">
             <div className="relative group">
-              <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
+              <Avatar className="w-20 h-20 sm:w-24 sm:h-24 border-4 border-background shadow-xl">
                 {profile?.profile_picture_url ? (
                   <AvatarImage src={profile.profile_picture_url} alt={displayName} />
                 ) : stravaStatus?.athlete?.profile ? (
@@ -200,42 +211,42 @@ export default function ProfilePage() {
                 )}
               </label>
             </div>
-            <div className="flex-1 text-center md:text-left space-y-2">
+            <div className="flex-1 text-center md:text-left space-y-1 sm:space-y-2">
               <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-                <h1 className="text-3xl font-bold font-display" data-testid="text-profile-name">{displayName}</h1>
-                <Badge variant="outline" className="text-xs">{user.role || 'user'}</Badge>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold font-display" data-testid="text-profile-name">{displayName}</h1>
+                <Badge variant="outline" className="text-[10px] sm:text-xs">{user.role || 'user'}</Badge>
               </div>
-              <div className="text-muted-foreground flex items-center justify-center md:justify-start gap-4 text-sm flex-wrap">
+              <div className="text-muted-foreground flex items-center justify-center md:justify-start gap-2 sm:gap-4 text-xs sm:text-sm flex-wrap">
                 <span>Joined {joinedDate}</span>
                 {user.focus && <><span>•</span><span>Focus: {user.focus}</span></>}
               </div>
-              <div className="flex items-center justify-center md:justify-start gap-2 mt-2 flex-wrap">
-                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">Level {user.level || 1}</Badge>
+              <div className="flex items-center justify-center md:justify-start gap-2 mt-1 sm:mt-2 flex-wrap">
+                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none text-xs sm:text-sm">Level {user.level || 1}</Badge>
               </div>
             </div>
-            <Button variant="outline" onClick={handleShareImpact} data-testid="button-share-impact">
-              <Share2 className="w-4 h-4 mr-2" /> Share Impact
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={handleShareImpact} data-testid="button-share-impact">
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Share Impact</span><span className="sm:hidden">Share</span>
             </Button>
           </div>
 
-          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-border pt-6">
+          <div className="mt-4 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-4 border-t border-border pt-4 sm:pt-6">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1">
-                <Coins className="w-4 h-4 text-primary" />
-                <span className="text-2xl font-bold font-mono" data-testid="text-profile-credits">{user.credits || 0}</span>
+                <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                <span className="text-lg sm:text-2xl font-bold font-mono" data-testid="text-profile-credits">{user.credits || 0}</span>
               </div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Credits</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Credits</div>
             </div>
             <div className="text-center border-l border-r border-border">
               <div className="flex items-center justify-center gap-1">
-                <Flame className="w-4 h-4 text-orange-500" />
-                <span className="text-2xl font-bold font-mono" data-testid="text-profile-streak">{user.streak || 0}</span>
+                <Flame className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500" />
+                <span className="text-lg sm:text-2xl font-bold font-mono" data-testid="text-profile-streak">{user.streak || 0}</span>
               </div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Day Streak</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Day Streak</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold font-mono" data-testid="text-profile-points">{user.points || 0}</div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Total XP</div>
+              <div className="text-lg sm:text-2xl font-bold font-mono" data-testid="text-profile-points">{user.points || 0}</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Total XP</div>
             </div>
           </div>
           

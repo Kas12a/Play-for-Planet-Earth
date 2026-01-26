@@ -148,9 +148,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             );
           })()}
-          <div>
-            <span className="text-base font-bold font-display tracking-tight block leading-tight">Play for Planet</span>
-            <span className="text-[10px] text-primary font-medium uppercase tracking-widest">Earth</span>
+          <div className="min-w-0">
+            <span className="text-sm sm:text-base font-bold font-display tracking-tight block leading-tight whitespace-nowrap">Play for Planet</span>
+            <span className="text-[10px] text-foreground font-medium uppercase tracking-widest">Earth</span>
           </div>
         </div>
         
@@ -219,9 +219,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             );
           })()}
-          <div>
-            <span className="font-bold font-display text-sm block leading-tight">Play for Planet</span>
-            <span className="text-[9px] text-primary font-medium uppercase tracking-widest">Earth</span>
+          <div className="min-w-0">
+            <span className="font-bold font-display text-xs sm:text-sm block leading-tight whitespace-nowrap">Play for Planet</span>
+            <span className="text-[9px] text-foreground font-medium uppercase tracking-widest">Earth</span>
           </div>
           {isPilotMode && <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/20 ml-1">PILOT</Badge>}
         </div>
@@ -256,9 +256,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                   );
                 })()}
-                <div>
-                  <span className="text-lg font-bold font-display block leading-tight">Play for Planet</span>
-                  <span className="text-xs text-primary font-medium uppercase tracking-widest">Earth</span>
+                <div className="min-w-0">
+                  <span className="text-base sm:text-lg font-bold font-display block leading-tight whitespace-nowrap">Play for Planet</span>
+                  <span className="text-[10px] text-foreground font-medium uppercase tracking-widest">Earth</span>
                 </div>
               </div>
               <nav className="flex flex-col gap-2">
@@ -293,7 +293,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       
       {/* Main Content */}
       <main className="flex-1 md:pl-64">
-        <div className="container mx-auto max-w-6xl p-4 md:p-8 animate-in fade-in duration-300">
+        <div className="container mx-auto max-w-6xl px-3 py-4 sm:p-4 md:p-6 lg:p-8 animate-in fade-in duration-300">
           {/* Email verification banner at top of every page */}
           <EmailVerificationBanner />
           {children}

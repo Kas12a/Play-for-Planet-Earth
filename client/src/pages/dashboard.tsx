@@ -116,32 +116,32 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="space-y-8 pb-20 md:pb-0">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-24 md:pb-0">
       {/* Hero Welcome Section */}
-      <div className="relative overflow-hidden rounded-3xl hero-gradient p-8 md:p-10 border border-white/[0.08]">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl hero-gradient p-4 sm:p-6 md:p-8 lg:p-10 border border-white/[0.08]">
+        <div className="absolute top-0 right-0 w-32 sm:w-48 md:w-64 h-32 sm:h-48 md:h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-24 sm:w-36 md:w-48 h-24 sm:h-36 md:h-48 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
         
         <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold font-display mb-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold font-display mb-1 sm:mb-2">
                 Welcome back, <span className="gradient-text">{displayName}</span>!
               </h1>
-              <p className="text-muted-foreground text-lg">Ready to make a difference today?</p>
+              <p className="text-muted-foreground text-sm sm:text-base md:text-lg">Ready to make a difference today?</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <Link href="/actions">
                 <Button 
-                  className="btn-premium text-primary-foreground font-semibold px-6 py-6 text-base rounded-xl"
+                  className="btn-premium text-primary-foreground font-semibold px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6 text-xs sm:text-sm md:text-base rounded-lg sm:rounded-xl"
                   data-testid="button-log-action"
                 >
-                  <PlusCircle className="mr-2 h-5 w-5" /> Log Action
+                  <PlusCircle className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> <span className="hidden sm:inline">Log Action</span><span className="sm:hidden">Log</span>
                 </Button>
               </Link>
               <Link href="/credits">
-                <Button variant="outline" className="px-5 py-6 rounded-xl border-white/10 hover:bg-white/5" data-testid="button-view-credits">
-                  <Coins className="mr-2 h-4 w-4" /> Credits
+                <Button variant="outline" className="px-3 py-4 sm:px-4 sm:py-5 md:px-5 md:py-6 rounded-lg sm:rounded-xl border-white/10 hover:bg-white/5 text-xs sm:text-sm" data-testid="button-view-credits">
+                  <Coins className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Credits
                 </Button>
               </Link>
             </div>
@@ -150,60 +150,60 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         <div className="stat-card card-hover">
-          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3 neon-glow-sm">
-              <Coins className="h-7 w-7 text-primary" />
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center p-3 sm:p-4 md:p-5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-2 sm:mb-3 neon-glow-sm">
+              <Coins className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-primary" />
             </div>
-            <div className="text-4xl font-bold font-mono gradient-text" data-testid="text-credits-balance">{user.credits}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Credits</div>
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold font-mono gradient-text" data-testid="text-credits-balance">{user.credits}</div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Credits</div>
           </div>
         </div>
 
         <div className="stat-card card-hover">
-          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center mb-3">
-              <Flame className="h-7 w-7 text-orange-500 animate-pulse streak-fire" />
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center p-3 sm:p-4 md:p-5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center mb-2 sm:mb-3">
+              <Flame className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-orange-500 animate-pulse streak-fire" />
             </div>
-            <div className="text-4xl font-bold font-mono text-orange-400">{user.streak}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Day Streak</div>
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold font-mono text-orange-400">{user.streak}</div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Day Streak</div>
           </div>
         </div>
 
         <div className="stat-card card-hover">
-          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 flex items-center justify-center mb-3">
-              <Trophy className="h-7 w-7 text-yellow-500" />
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center p-3 sm:p-4 md:p-5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 flex items-center justify-center mb-2 sm:mb-3">
+              <Trophy className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-yellow-500" />
             </div>
-            <div className="text-4xl font-bold font-mono text-yellow-400">{user.points}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Total Points</div>
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold font-mono text-yellow-400">{user.points}</div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Total Points</div>
           </div>
         </div>
 
         <div className="stat-card card-hover">
-          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-3">
-              <Target className="h-7 w-7 text-purple-500" />
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center p-3 sm:p-4 md:p-5">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-2 sm:mb-3">
+              <Target className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-purple-500" />
             </div>
-            <div className="text-4xl font-bold font-mono text-purple-400">{weeklyActions.length}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">This Week</div>
+            <div className="text-2xl sm:text-3xl md:text-4xl font-bold font-mono text-purple-400">{weeklyActions.length}</div>
+            <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">This Week</div>
           </div>
         </div>
       </div>
 
       {/* Impact Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
         <Card className="glass-card card-hover overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardContent className="pt-6 relative">
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20">
-                <Cloud className="w-7 h-7 text-emerald-400" />
+          <CardContent className="pt-4 sm:pt-6 relative">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20">
+                <Cloud className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-emerald-400" />
               </div>
               <div>
-                <div className="text-3xl font-bold font-mono text-emerald-400">{totalCO2Saved.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
-                <div className="text-sm text-muted-foreground">CO2e saved this week</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold font-mono text-emerald-400">{totalCO2Saved.toFixed(1)} <span className="text-xs sm:text-sm font-sans text-muted-foreground">kg</span></div>
+                <div className="text-xs sm:text-sm text-muted-foreground">CO2e saved this week</div>
               </div>
             </div>
           </CardContent>
@@ -211,14 +211,14 @@ export default function DashboardPage() {
 
         <Card className="glass-card card-hover overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <CardContent className="pt-6 relative">
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 border border-cyan-500/20">
-                <Trash2 className="w-7 h-7 text-cyan-400" />
+          <CardContent className="pt-4 sm:pt-6 relative">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 border border-cyan-500/20">
+                <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-cyan-400" />
               </div>
               <div>
-                <div className="text-3xl font-bold font-mono text-cyan-400">{totalWasteAvoided.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
-                <div className="text-sm text-muted-foreground">Waste avoided this week</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold font-mono text-cyan-400">{totalWasteAvoided.toFixed(1)} <span className="text-xs sm:text-sm font-sans text-muted-foreground">kg</span></div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Waste avoided this week</div>
               </div>
             </div>
           </CardContent>
