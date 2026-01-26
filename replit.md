@@ -207,3 +207,5 @@ Required secrets:
 - Email verification now non-blocking (modal, not gate)
 - New users start with 0 credits/points
 - Admin access restricted to database role only
+- User avatar displays in sidebar/header (from onboarding selection)
+- App branding: "Play for Planet Earth" in all headers
