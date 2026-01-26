@@ -36,6 +36,8 @@ export interface Profile {
   credits: number;
   streak: number;
   focus: string | null;
+  email_verified: boolean;
+  email_verified_at: string | null;
   email_verify_dismissed_at: string | null;
   created_at: string;
 }
@@ -87,6 +89,8 @@ export function useProfile() {
             credits: 0,
             streak: 0,
             focus: null,
+            email_verified: false,
+            email_verified_at: null,
             email_verify_dismissed_at: null,
             created_at: new Date().toISOString(),
           });

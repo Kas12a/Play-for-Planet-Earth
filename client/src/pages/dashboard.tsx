@@ -1,7 +1,6 @@
 import { useStore, ACTION_TYPES } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useProfile } from "@/lib/useProfile";
-import { EmailVerificationModal, EmailVerificationBanner } from "@/components/email-verification-modal";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -65,6 +64,9 @@ export default function DashboardPage() {
     streak: 0,
     points: 0,
   };
+  
+  // Use display_name first (from profile), fall back to name, then email prefix
+  const displayName = (profile?.display_name) || user.name || authUser.email?.split('@')[0] || 'Eco Warrior';
 
   // Mock data calculations
   const weeklyGoal = 500;
@@ -115,13 +117,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 pb-20 md:pb-0">
-      <EmailVerificationModal />
-      <EmailVerificationBanner />
       {/* Welcome & Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 to-card border-primary/20">
           <CardHeader className="pb-2">
-            <CardTitle className="font-display text-2xl">Hi, {user.name || 'Eco Warrior'}!</CardTitle>
+            <CardTitle className="font-display text-2xl">Hi, {displayName}!</CardTitle>
             <CardDescription>Ready to save the planet today?</CardDescription>
           </CardHeader>
           <CardContent>

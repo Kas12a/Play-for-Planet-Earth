@@ -21,9 +21,8 @@ export function EmailVerificationModal() {
   useEffect(() => {
     if (!user || !profile) return;
     
-    // Check if email is already verified
-    const isVerified = user.email_confirmed_at || user.confirmed_at;
-    if (isVerified) return;
+    // Check if email is already verified in our profiles table
+    if (profile.email_verified) return;
     
     // Check if user dismissed recently
     const dismissedAt = profile.email_verify_dismissed_at;
@@ -66,6 +65,7 @@ export function EmailVerificationModal() {
       return;
     }
     
+    // Check Supabase auth for email confirmation (from clicking link)
     const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
     
     if (error) {
@@ -75,6 +75,11 @@ export function EmailVerificationModal() {
     }
     
     if (refreshedUser?.email_confirmed_at || refreshedUser?.confirmed_at) {
+      // Mark as verified in our profiles table
+      await updateProfile({ 
+        email_verified: true, 
+        email_verified_at: new Date().toISOString() 
+      });
       setOpen(false);
     } else {
       setError('Email not yet verified. Please check your inbox and click the verification link.');
@@ -89,8 +94,8 @@ export function EmailVerificationModal() {
 
   if (!user || !profile) return null;
   
-  const isVerified = user.email_confirmed_at || user.confirmed_at;
-  if (isVerified) return null;
+  // Use our profile's email_verified field
+  if (profile.email_verified) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -163,13 +168,14 @@ export function EmailVerificationModal() {
   );
 }
 
-export function EmailVerificationBanner() {
+export function EmailVerificationBanner({ onVerifyClick }: { onVerifyClick?: () => void }) {
   const { user } = useAuth();
+  const { profile } = useProfile();
   
-  if (!user) return null;
+  if (!user || !profile) return null;
   
-  const isVerified = user.email_confirmed_at || user.confirmed_at;
-  if (isVerified) return null;
+  // Use our profile's email_verified field
+  if (profile.email_verified) return null;
   
   return (
     <div 
@@ -182,6 +188,15 @@ export function EmailVerificationBanner() {
           Please verify your email address to secure your account.
         </p>
       </div>
+      {onVerifyClick && (
+        <button 
+          onClick={onVerifyClick}
+          className="text-sm text-amber-400 hover:text-amber-300 underline whitespace-nowrap"
+          data-testid="link-verify-email"
+        >
+          Verify now
+        </button>
+      )}
     </div>
   );
 }

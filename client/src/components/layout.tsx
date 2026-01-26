@@ -3,6 +3,7 @@ import { useStore } from "@/lib/store";
 import { useAppConfig } from "@/lib/configContext";
 import { useAuth } from "@/lib/authContext";
 import { useProfile } from "@/lib/useProfile";
+import { EmailVerificationBanner, EmailVerificationModal } from "@/components/email-verification-modal";
 import { 
   LayoutDashboard, 
   ListTodo, 
@@ -219,9 +220,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      {/* Email Verification Modal (shows on all pages) */}
+      <EmailVerificationModal />
+      
       {/* Main Content */}
       <main className="flex-1 md:pl-64">
         <div className="container mx-auto max-w-6xl p-4 md:p-8 animate-in fade-in duration-300">
+          {/* Email verification banner at top of every page */}
+          <EmailVerificationBanner />
           {children}
         </div>
         
