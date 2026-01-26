@@ -213,25 +213,38 @@ export default function OnboardingPage() {
         )}
 
         {currentStep === 'welcome' && (
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="text-center pb-4">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(34,197,94,0.4)]">
-                <Leaf className="w-10 h-10 text-primary-foreground" />
+          <Card className="glass-card border-white/[0.08] overflow-hidden">
+            <div className="absolute inset-0 hero-gradient pointer-events-none" />
+            <CardHeader className="text-center pb-4 relative">
+              <div className="w-24 h-24 bg-gradient-to-br from-primary to-emerald-400 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_60px_rgba(34,197,94,0.4)] rotate-3 hover:rotate-0 transition-transform duration-500">
+                <Leaf className="w-12 h-12 text-primary-foreground" />
               </div>
-              <CardTitle className="text-3xl font-display">Play for Planet Earth</CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardTitle className="text-4xl font-display">
+                <span className="gradient-text">Play for Planet</span>
+              </CardTitle>
+              <p className="text-lg font-display text-primary font-medium mt-1">Earth</p>
+              <CardDescription className="text-base mt-4 leading-relaxed">
                 Turn everyday eco-actions into verified impact. Connect your fitness apps, 
                 join challenges, and help make a difference.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-center text-sm text-muted-foreground">
-              <p>Earn points for sustainable choices</p>
-              <p>Track your real environmental impact</p>
-              <p>Join a global community of changemakers</p>
+            <CardContent className="space-y-3 text-center relative">
+              <div className="flex items-center justify-center gap-3 text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                <p className="text-sm">Earn points for sustainable choices</p>
+              </div>
+              <div className="flex items-center justify-center gap-3 text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                <p className="text-sm">Track your real environmental impact</p>
+              </div>
+              <div className="flex items-center justify-center gap-3 text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                <p className="text-sm">Join a global community of changemakers</p>
+              </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="relative">
               <Button 
-                className="w-full text-lg py-6" 
+                className="w-full btn-premium text-lg py-7 rounded-xl" 
                 onClick={() => saveAndNext('profile')}
                 disabled={saving}
                 data-testid="button-welcome-continue"
@@ -244,28 +257,28 @@ export default function OnboardingPage() {
         )}
 
         {currentStep === 'profile' && (
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+          <Card className="glass-card border-white/[0.08]">
             <CardHeader>
-              <CardTitle>Create Your Profile</CardTitle>
+              <CardTitle className="text-2xl gradient-text">Create Your Profile</CardTitle>
               <CardDescription>Tell us a bit about yourself</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label>Choose an Avatar</Label>
-                <div className="grid grid-cols-4 gap-3">
+                <Label className="text-sm font-medium">Choose an Avatar</Label>
+                <div className="grid grid-cols-4 gap-4">
                   {AVATARS.map(({ key, icon: Icon, color }) => (
                     <button
                       key={key}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, avatar_key: key }))}
-                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${color} ${
+                      className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${color} shadow-lg ${
                         formData.avatar_key === key 
-                          ? 'ring-4 ring-primary ring-offset-2 ring-offset-background scale-110' 
-                          : 'opacity-70 hover:opacity-100'
+                          ? 'ring-4 ring-primary ring-offset-2 ring-offset-background scale-110 neon-glow' 
+                          : 'opacity-60 hover:opacity-100 hover:scale-105'
                       }`}
                       data-testid={`avatar-${key}`}
                     >
-                      <Icon className="w-7 h-7 text-white" />
+                      <Icon className="w-8 h-8 text-white" />
                     </button>
                   ))}
                 </div>

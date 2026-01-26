@@ -117,91 +117,122 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 pb-20 md:pb-0">
-      {/* Welcome & Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 to-card border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="font-display text-2xl">Hi, {displayName}!</CardTitle>
-            <CardDescription>Ready to save the planet today?</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 mt-2">
+      {/* Hero Welcome Section */}
+      <div className="relative overflow-hidden rounded-3xl hero-gradient p-8 md:p-10 border border-white/[0.08]">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+        
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold font-display mb-2">
+                Welcome back, <span className="gradient-text">{displayName}</span>!
+              </h1>
+              <p className="text-muted-foreground text-lg">Ready to make a difference today?</p>
+            </div>
+            <div className="flex gap-3">
               <Link href="/actions">
                 <Button 
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-105"
+                  className="btn-premium text-primary-foreground font-semibold px-6 py-6 text-base rounded-xl"
                   data-testid="button-log-action"
                 >
                   <PlusCircle className="mr-2 h-5 w-5" /> Log Action
                 </Button>
               </Link>
               <Link href="/credits">
-                <Button variant="outline" data-testid="button-view-credits">
-                  <Coins className="mr-2 h-4 w-4" /> View Credits
+                <Button variant="outline" className="px-5 py-6 rounded-xl border-white/10 hover:bg-white/5" data-testid="button-view-credits">
+                  <Coins className="mr-2 h-4 w-4" /> Credits
                 </Button>
               </Link>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
 
-        <Card>
-          <CardContent className="pt-6 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Coins className="h-6 w-6 text-primary" />
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="stat-card card-hover">
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-3 neon-glow-sm">
+              <Coins className="h-7 w-7 text-primary" />
             </div>
-            <div className="text-3xl font-bold font-mono" data-testid="text-credits-balance">{user.credits}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Credits</div>
-          </CardContent>
-        </Card>
+            <div className="text-4xl font-bold font-mono gradient-text" data-testid="text-credits-balance">{user.credits}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Credits</div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center mb-2">
-              <Flame className="h-6 w-6 text-orange-500 animate-pulse" />
+        <div className="stat-card card-hover">
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center mb-3">
+              <Flame className="h-7 w-7 text-orange-500 animate-pulse streak-fire" />
             </div>
-            <div className="text-3xl font-bold font-mono">{user.streak}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Day Streak</div>
-          </CardContent>
-        </Card>
+            <div className="text-4xl font-bold font-mono text-orange-400">{user.streak}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Day Streak</div>
+          </div>
+        </div>
+
+        <div className="stat-card card-hover">
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 flex items-center justify-center mb-3">
+              <Trophy className="h-7 w-7 text-yellow-500" />
+            </div>
+            <div className="text-4xl font-bold font-mono text-yellow-400">{user.points}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Total Points</div>
+          </div>
+        </div>
+
+        <div className="stat-card card-hover">
+          <div className="stat-card-inner flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-3">
+              <Target className="h-7 w-7 text-purple-500" />
+            </div>
+            <div className="text-4xl font-bold font-mono text-purple-400">{weeklyActions.length}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">This Week</div>
+          </div>
+        </div>
       </div>
 
       {/* Impact Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-emerald-500/5 to-card">
-          <CardContent className="pt-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <Card className="glass-card card-hover overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardContent className="pt-6 relative">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-500/10">
-                <Cloud className="w-6 h-6 text-emerald-500" />
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/20">
+                <Cloud className="w-7 h-7 text-emerald-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold font-mono">{totalCO2Saved.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
+                <div className="text-3xl font-bold font-mono text-emerald-400">{totalCO2Saved.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
                 <div className="text-sm text-muted-foreground">CO2e saved this week</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-500/5 to-card">
-          <CardContent className="pt-6">
+        <Card className="glass-card card-hover overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardContent className="pt-6 relative">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-blue-500/10">
-                <Trash2 className="w-6 h-6 text-blue-500" />
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 border border-cyan-500/20">
+                <Trash2 className="w-7 h-7 text-cyan-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold font-mono">{totalWasteAvoided.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
+                <div className="text-3xl font-bold font-mono text-cyan-400">{totalWasteAvoided.toFixed(1)} <span className="text-sm font-sans text-muted-foreground">kg</span></div>
                 <div className="text-sm text-muted-foreground">Waste avoided this week</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/5 to-card">
-          <CardContent className="pt-6">
+        <Card className="glass-card card-hover overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <CardContent className="pt-6 relative">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/10">
-                <TrendingUp className="w-6 h-6 text-amber-500" />
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20">
+                <TrendingUp className="w-7 h-7 text-amber-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold font-mono">{weeklyActions.length}</div>
+                <div className="text-3xl font-bold font-mono text-amber-400">{weeklyActions.length}</div>
                 <div className="text-sm text-muted-foreground">Actions this week</div>
               </div>
             </div>

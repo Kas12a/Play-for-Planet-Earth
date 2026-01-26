@@ -57,53 +57,57 @@
 }
 
 :root {
-  /* Default to Dark Mode aesthetics for this brand */
   color-scheme: dark;
   
-  --background: 160 30% 6%; /* Deep Forest Green */
-  --foreground: 160 10% 95%; /* Soft White */
+  /* Premium Dark Nature Theme */
+  --background: 155 35% 4%;
+  --foreground: 150 15% 95%;
 
-  --card: 160 30% 9%;
-  --card-foreground: 160 10% 95%;
+  --card: 155 30% 7%;
+  --card-foreground: 150 15% 95%;
 
-  --popover: 160 30% 9%;
-  --popover-foreground: 160 10% 95%;
+  --popover: 155 30% 8%;
+  --popover-foreground: 150 15% 95%;
 
-  --primary: 140 65% 55%; /* Neon Green */
-  --primary-foreground: 160 40% 5%;
+  /* Vibrant Emerald Primary */
+  --primary: 152 76% 50%;
+  --primary-foreground: 155 50% 5%;
 
-  --secondary: 160 20% 15%;
-  --secondary-foreground: 160 10% 95%;
+  --secondary: 155 25% 12%;
+  --secondary-foreground: 150 15% 95%;
 
-  --muted: 160 20% 15%;
-  --muted-foreground: 160 10% 65%;
+  --muted: 155 20% 14%;
+  --muted-foreground: 150 15% 60%;
 
-  --accent: 140 65% 55%;
-  --accent-foreground: 160 40% 5%;
+  /* Golden Accent for highlights */
+  --accent: 45 95% 55%;
+  --accent-foreground: 45 100% 10%;
 
-  --destructive: 0 62% 30%;
+  --destructive: 0 72% 50%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 160 20% 15%;
-  --input: 160 20% 15%;
-  --ring: 140 65% 55%;
+  --border: 155 25% 12%;
+  --input: 155 25% 12%;
+  --ring: 152 76% 50%;
 
-  --radius: 0.75rem;
+  --radius: 1rem;
 
-  --chart-1: 140 65% 55%;
-  --chart-2: 170 50% 45%;
-  --chart-3: 100 50% 45%;
-  --chart-4: 160 30% 30%;
-  --chart-5: 140 40% 20%;
+  /* Chart colors - vibrant eco palette */
+  --chart-1: 152 76% 50%;
+  --chart-2: 175 65% 45%;
+  --chart-3: 85 55% 50%;
+  --chart-4: 45 95% 55%;
+  --chart-5: 200 75% 50%;
 
-  --sidebar: 160 30% 5%;
-  --sidebar-foreground: 160 10% 95%;
-  --sidebar-primary: 140 65% 55%;
-  --sidebar-primary-foreground: 160 40% 5%;
-  --sidebar-accent: 160 20% 15%;
-  --sidebar-accent-foreground: 160 10% 95%;
-  --sidebar-border: 160 20% 15%;
-  --sidebar-ring: 140 65% 55%;
+  /* Sidebar with subtle gradient feel */
+  --sidebar: 155 35% 3%;
+  --sidebar-foreground: 150 15% 95%;
+  --sidebar-primary: 152 76% 50%;
+  --sidebar-primary-foreground: 155 50% 5%;
+  --sidebar-accent: 155 25% 10%;
+  --sidebar-accent-foreground: 150 15% 95%;
+  --sidebar-border: 155 25% 10%;
+  --sidebar-ring: 152 76% 50%;
 }
 
 @layer base {
@@ -112,16 +116,251 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsla(152, 76%, 50%, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, hsla(175, 65%, 45%, 0.08) 0%, transparent 40%);
+    background-attachment: fixed;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
   }
 }
 
+/* Premium Glass Card */
 .glass-card {
-  @apply bg-card/60 backdrop-blur-md border border-white/5;
+  @apply bg-card/70 backdrop-blur-xl border border-white/[0.08] shadow-xl;
+  background: linear-gradient(135deg, hsla(155, 30%, 10%, 0.8) 0%, hsla(155, 30%, 6%, 0.9) 100%);
 }
 
+/* Neon Glow Effects */
 .neon-glow {
-  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+  box-shadow: 
+    0 0 20px hsla(152, 76%, 50%, 0.25),
+    0 0 40px hsla(152, 76%, 50%, 0.1);
+}
+
+.neon-glow-sm {
+  box-shadow: 0 0 12px hsla(152, 76%, 50%, 0.2);
+}
+
+.neon-glow-gold {
+  box-shadow: 
+    0 0 20px hsla(45, 95%, 55%, 0.25),
+    0 0 40px hsla(45, 95%, 55%, 0.1);
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(152, 76%, 55%) 0%, hsl(175, 65%, 50%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, hsl(45, 95%, 60%) 0%, hsl(35, 90%, 55%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Premium Button Styles */
+.btn-premium {
+  @apply relative overflow-hidden;
+  background: linear-gradient(135deg, hsl(152, 76%, 50%) 0%, hsl(165, 70%, 45%) 100%);
+  box-shadow: 
+    0 4px 15px hsla(152, 76%, 50%, 0.35),
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 25px hsla(152, 76%, 50%, 0.45),
+    inset 0 1px 0 hsla(0, 0%, 100%, 0.25);
+}
+
+.btn-premium:active {
+  transform: translateY(0);
+}
+
+/* Stat Card with Gradient Border */
+.stat-card {
+  @apply relative rounded-2xl p-[1px] overflow-hidden;
+  background: linear-gradient(135deg, hsla(152, 76%, 50%, 0.3) 0%, hsla(175, 65%, 45%, 0.1) 100%);
+}
+
+.stat-card-inner {
+  @apply bg-card rounded-2xl p-5 h-full;
+  background: linear-gradient(135deg, hsla(155, 30%, 9%, 0.95) 0%, hsla(155, 30%, 6%, 0.98) 100%);
+}
+
+/* Animated Background Orbs */
+.bg-orb {
+  @apply absolute rounded-full blur-3xl opacity-30 pointer-events-none;
+  animation: float 20s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-20px) translateX(10px); }
+  50% { transform: translateY(-10px) translateX(-10px); }
+  75% { transform: translateY(-25px) translateX(5px); }
+}
+
+/* Pulse Animation for Active States */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px hsla(152, 76%, 50%, 0.3); }
+  50% { box-shadow: 0 0 25px hsla(152, 76%, 50%, 0.5); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Shimmer Effect for Loading/Premium Items */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg, 
+    transparent 0%, 
+    hsla(152, 76%, 50%, 0.1) 50%, 
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Card Hover Effect */
+.card-hover {
+  @apply transition-all duration-300 ease-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 20px 40px hsla(0, 0%, 0%, 0.3),
+    0 0 30px hsla(152, 76%, 50%, 0.1);
+}
+
+/* Progress Bar Gradient */
+.progress-gradient {
+  background: linear-gradient(90deg, hsl(152, 76%, 50%) 0%, hsl(175, 65%, 50%) 50%, hsl(45, 95%, 55%) 100%);
+}
+
+/* Avatar Ring */
+.avatar-ring {
+  @apply relative;
+}
+
+.avatar-ring::before {
+  content: '';
+  @apply absolute inset-0 rounded-full;
+  background: linear-gradient(135deg, hsl(152, 76%, 50%), hsl(175, 65%, 50%));
+  padding: 2px;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/* Badge Styles */
+.badge-premium {
+  background: linear-gradient(135deg, hsla(152, 76%, 50%, 0.2) 0%, hsla(175, 65%, 45%, 0.1) 100%);
+  border: 1px solid hsla(152, 76%, 50%, 0.3);
+}
+
+.badge-gold {
+  background: linear-gradient(135deg, hsla(45, 95%, 55%, 0.2) 0%, hsla(35, 90%, 50%, 0.1) 100%);
+  border: 1px solid hsla(45, 95%, 55%, 0.3);
+}
+
+/* Sidebar Active Item */
+.sidebar-active {
+  @apply relative;
+  background: linear-gradient(90deg, hsla(152, 76%, 50%, 0.15) 0%, transparent 100%);
+}
+
+.sidebar-active::before {
+  content: '';
+  @apply absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full;
+  background: linear-gradient(180deg, hsl(152, 76%, 50%), hsl(175, 65%, 50%));
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsla(155, 30%, 10%, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(152, 76%, 40%), hsl(155, 30%, 25%));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(152, 76%, 50%), hsl(155, 30%, 35%));
+}
+
+/* Input Focus Ring */
+.input-premium:focus {
+  box-shadow: 
+    0 0 0 2px hsla(155, 35%, 4%, 1),
+    0 0 0 4px hsla(152, 76%, 50%, 0.5);
+}
+
+/* Floating Animation */
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.float-subtle {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+/* Gradient Border */
+.gradient-border {
+  @apply relative;
+  background: linear-gradient(135deg, hsla(152, 76%, 50%, 0.4) 0%, hsla(175, 65%, 45%, 0.2) 100%);
+  padding: 1px;
+}
+
+.gradient-border > * {
+  @apply bg-card;
+}
+
+/* Impact Number Animation */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count {
+  animation: count-up 0.6s ease-out forwards;
+}
+
+/* Streak Fire Effect */
+.streak-fire {
+  text-shadow: 0 0 10px hsla(30, 100%, 50%, 0.5);
+}
+
+/* Quest Card Gradient */
+.quest-gradient {
+  background: linear-gradient(135deg, hsla(155, 30%, 12%, 1) 0%, hsla(155, 30%, 8%, 1) 100%);
+}
+
+/* Hero Section Background */
+.hero-gradient {
+  background: 
+    radial-gradient(ellipse 100% 100% at 0% 0%, hsla(152, 76%, 50%, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 80% at 100% 100%, hsla(175, 65%, 45%, 0.1) 0%, transparent 40%);
 }

@@ -436,12 +436,15 @@ export default function AuthPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-sidebar to-transparent z-10" />
         
-        <div className="relative z-20 max-w-md text-center">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_30px_rgba(34,197,94,0.4)]">
-            <Leaf className="w-8 h-8 text-primary-foreground" />
+        <div className="relative z-20 max-w-lg text-center">
+          <div className="w-20 h-20 bg-gradient-to-br from-primary to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(34,197,94,0.4)] rotate-3 hover:rotate-0 transition-transform duration-500">
+            <Leaf className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl font-bold font-display mb-4 tracking-tight">Play for Planet Earth</h1>
-          <p className="text-xl text-muted-foreground">
+          <h1 className="text-5xl font-bold font-display mb-2 tracking-tight">
+            <span className="gradient-text">Play for Planet</span>
+          </h1>
+          <p className="text-2xl font-display text-primary font-medium mb-6">Earth</p>
+          <p className="text-xl text-muted-foreground leading-relaxed">
             Log eco-actions, earn rewards, and join a global community making a real impact.
           </p>
         </div>
@@ -450,20 +453,21 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-6 sm:p-12 bg-background relative z-30">
         <div className="w-full max-w-md space-y-8">
           <div className="lg:hidden text-center mb-8">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Leaf className="w-6 h-6 text-primary-foreground" />
+            <div className="w-14 h-14 bg-gradient-to-br from-primary to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg rotate-3">
+              <Leaf className="w-7 h-7 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold font-display">Play for Planet Earth</h1>
+            <h1 className="text-2xl font-bold font-display gradient-text">Play for Planet</h1>
+            <p className="text-sm font-medium text-primary uppercase tracking-widest">Earth</p>
           </div>
 
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="login" data-testid="tab-login">Login</TabsTrigger>
-              <TabsTrigger value="signup" data-testid="tab-signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 rounded-xl">
+              <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-login">Login</TabsTrigger>
+              <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-signup">Sign Up</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
-              <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <Card className="glass-card border-white/[0.08]">
                 <CardHeader>
                   <CardTitle>Welcome back</CardTitle>
                   <CardDescription>Enter your email and password to access your account</CardDescription>
