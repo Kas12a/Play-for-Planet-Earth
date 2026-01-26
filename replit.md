@@ -209,3 +209,4 @@ Required secrets:
 - Admin access restricted to database role only
 - User avatar displays in sidebar/header (from onboarding selection)
 - App branding: "Play for Planet Earth" in all headers
+- Profile picture upload: Users can upload custom photos (replaces avatar icon)
