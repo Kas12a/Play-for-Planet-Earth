@@ -1,0 +1,153 @@
+You are a senior full-stack engineer + QA lead. We have a published PWA onboarding flow but it’s broken:
+
+ISSUES:
+1) After Sign Up, user is sent back to login (should continue into onboarding).
+2) After creating profile and selecting “Get started”, app gets stuck in a redirect loop and doesn’t enter the app.
+3) Email verification is still required to login, but product requirement is: allow entry first, then verify inside app via popup (non-blocking).
+
+PRODUCT REQUIREMENTS (must implement)
+A) Onboarding must happen immediately after signup/login:
+- Welcome → Auth → Create Profile → Start Mode → Interests (skip allowed) → Permissions → App
+B) Email verification must NOT block login/signup.
+- Show in-app modal after entering app:
+  “Verify your email” with actions: Send code, Verify code, Later
+- Keep reminding until verified (every launch + every 24h after dismiss)
+C) New users must start with credits=0 and points=0.
+
+AGE RANGE OPTIONS (exact)
+12-15, 16-20, 21-28, 29-35, 36+
+
+SOCIAL LOGIN
+Hide for now.
+
+========================
+PHASE 0 — Ask me for required settings (one message)
+========================
+Ask me:
+1) Confirm Supabase Auth settings access (Dashboard).
+2) Confirm whether we can DISABLE “Confirm email required” so users can login immediately.
+3) Confirm whether “Email OTP” is enabled (so we can send a verification code email without blocking login).
+4) Confirm final domain used for auth redirects (play4earth.co).
+
+Then proceed with the safest defaults:
+- Disable confirm-email gating
+- Use Email OTP verification inside app
+If you can’t change Supabase settings directly, give me precise instructions where to click in Supabase UI.
+
+========================
+PHASE 1 — Fix the “signup returns to login” (P0)
+========================
+1) Diagnose:
+- Log auth responses for signup and login (sanitized).
+- Check whether signUp returns session=null and user created but unconfirmed.
+- If confirm-email is enforced, that’s why user is returned to login.
+
+2) Fix:
+- Change Supabase Auth config so signup/login yields a session immediately.
+- Do NOT block unverified users from logging in.
+
+3) In code:
+- After signUp success:
+  - if session exists → route to onboarding
+  - if session does not exist → show clear message and provide a “Send OTP code” verification flow (but we prefer config fix so session exists)
+
+========================
+PHASE 2 — Implement non-blocking in-app email verification (OTP)
+========================
+We need email verification inside the app without blocking login.
+
+DB:
+- Add to public.profiles:
+  - email_verified boolean default false
+  - email_verified_at timestamptz null
+
+UI Flow:
+- After onboarding complete (or on Home mount), if profile.email_verified = false:
+  - show modal: “Verify your email”
+  - Button 1: “Send code” → trigger Supabase Email OTP to user.email
+  - Input: code (6 digits)
+  - Button 2: “Verify code” → call supabase.auth.verifyOtp(...) with correct type
+  - On success:
+     - set profiles.email_verified=true, email_verified_at=now()
+     - show success toast
+  - Button 3: “Later” → dismiss; store dismissedAt timestamp; re-show next launch or after 24h
+- Also show a small banner reminder until verified.
+
+Important:
+- This verification is for your product logic. It is not Supabase confirm-email gating.
+- Do not require the user to log out.
+
+========================
+PHASE 3 — Fix onboarding loop (P0/P1)
+========================
+Make routing deterministic. Implement a single source of truth:
+
+Define state machine:
+- if no session → /auth
+- else load profile once (with loading screen)
+- if profile row missing → create it (server-side trigger preferred; else client upsert)
+- if onboarding_complete=false → route to onboarding at step = onboarding_step
+- if onboarding_complete=true → route to /home
+
+Rules to prevent loops:
+- Do not redirect while profile is still loading.
+- Never redirect to a route you are already on.
+- Persist onboarding_step updates atomically before navigating.
+- Add a short “Loading profile…” screen to avoid flicker and multiple redirects.
+
+Also verify the schema cache issue is gone and required columns exist:
+- onboarding_step text default 'welcome'
+- onboarding_complete boolean default false
+
+========================
+PHASE 4 — Ensure profiles row exists & defaults applied
+========================
+Guarantee every user has a profiles row. Prefer DB trigger:
+- on auth.users insert → insert into public.profiles(id, onboarding_step='profile', onboarding_complete=false, points=0, credits=0, email_verified=false)
+
+RLS:
+- user can select/update their own profile
+- user cannot update points/credits directly
+- points/credits start at 0
+
+========================
+PHASE 5 — Full end-to-end verification checklist (must pass)
+========================
+Test on desktop + mobile viewport:
+
+A) Fresh signup
+1) Welcome → Get started → Sign Up
+2) User stays in app (NOT thrown back to login)
+3) Create Profile: requires display_name + age_range
+4) Choose Individual/Group (group can be placeholder but must save start_mode)
+5) Interests: choose 3 OR Skip for now
+6) Permissions screen: toggles work; denial handled gracefully
+7) Lands on Home successfully (no redirect loop)
+
+B) Email verification inside app
+8) After entering app: verification modal appears (non-blocking)
+9) Send code → email arrives
+10) Enter code → verify → profiles.email_verified becomes true
+11) Banner/modal disappears; remains gone on next launch
+
+C) Credits/points
+12) New users start with credits=0 and points=0 (DB + UI)
+
+D) Logout/login
+13) Logout → Login → resumes correctly (no onboarding loop)
+14) If onboarding incomplete, resumes at correct step
+
+Deliverable:
+- A GO/NO-GO report with:
+  - which root cause caused signup->login redirect
+  - what settings changed in Supabase
+  - what code changes fixed loops
+  - evidence screenshots/logs
+Do not stop until Flow A and Flow B are confirmed working.
+
+========================
+PHASE 6 — If Supabase confirm-email cannot be disabled (fallback)
+========================
+If we absolutely cannot change confirm-email gating:
+- After signup, show a “Check your email to continue” screen
+- But this violates product requirement, so treat it as NO-GO unless I approve.
