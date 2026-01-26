@@ -31,7 +31,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user: storeUser, logout: storeLogout } = useStore();
   const { user: authUser, signOut, initialized } = useAuth();
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { config } = useAppConfig();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -39,7 +39,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isPublicPath = PUBLIC_PATHS.some(path => location.startsWith(path));
   const isOnboardingPath = location.startsWith('/onboarding');
   const isAuthenticated = !!(authUser || storeUser);
-  const needsOnboarding = profile && !profile.onboarding_complete;
+  
+  // Only determine onboarding status after profile has loaded
+  const profileReady = isAuthenticated && !profileLoading && profile !== null;
+  const needsOnboarding = profileReady && !profile.onboarding_complete;
   
   // Redirect unauthenticated users to auth page
   useEffect(() => {
@@ -48,12 +51,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [initialized, isAuthenticated, isPublicPath, setLocation]);
   
-  // Redirect users who need onboarding
+  // Redirect users who need onboarding (only after profile is loaded)
   useEffect(() => {
-    if (initialized && isAuthenticated && needsOnboarding && !isOnboardingPath && !isPublicPath) {
+    if (initialized && profileReady && needsOnboarding && !isOnboardingPath && !isPublicPath) {
       setLocation('/onboarding');
     }
-  }, [initialized, isAuthenticated, needsOnboarding, isOnboardingPath, isPublicPath, setLocation]);
+  }, [initialized, profileReady, needsOnboarding, isOnboardingPath, isPublicPath, setLocation]);
   
   const handleLogout = async () => {
     await signOut();
@@ -61,7 +64,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setLocation('/auth');
   };
 
-  if (!initialized) {
+  // Show loading while auth or profile is initializing
+  if (!initialized || (isAuthenticated && profileLoading && !isPublicPath)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />

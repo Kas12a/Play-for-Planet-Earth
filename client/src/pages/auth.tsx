@@ -80,7 +80,7 @@ export default function AuthPage() {
     }
 
     try {
-      const { error } = await signUp(email, password);
+      const { error, needsVerification } = await signUp(email, password);
       
       if (error) {
         if (error.message.includes('already registered')) {
@@ -88,8 +88,12 @@ export default function AuthPage() {
         } else {
           setError(error.message);
         }
+      } else if (needsVerification) {
+        // Email confirmation is required (Supabase setting) - show verification screen
+        setVerificationEmail(email);
+        setVerificationSent(true);
       } else {
-        // Skip email verification for pilot - go directly to onboarding
+        // Session created immediately - go to onboarding
         setLocation("/onboarding");
       }
     } catch (err) {
