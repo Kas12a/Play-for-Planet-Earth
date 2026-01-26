@@ -15,6 +15,9 @@ A gamified eco-action tracking platform that rewards sustainable behaviors with 
 - Terms and Privacy pages added
 - OAuth security: HMAC-SHA256 signed state with 10-min expiry
 - Password reset flow: Complete with recovery mode detection
+- Multi-step onboarding flow: Welcome, Profile, Mode, Interests, Permissions
+- Email verification: Non-blocking modal (can use app before verifying)
+- New users start with 0 credits and 0 points
 
 ## Verification Status (January 2026)
 - Gate 1: Database schema deployed (activity_sources, activity_events, points_ledger, RLS)
@@ -38,6 +41,12 @@ A gamified eco-action tracking platform that rewards sustainable behaviors with 
 - `scripts/verified_pilot_schema.sql` - V1.2 additions: activity_sources, activity_events, points_ledger
 - `scripts/seed_pilot.ts` - Seed actions, quests, lessons, badges
 - `scripts/reset_pilot.ts` - Wipe all user data (keeps content)
+
+### Onboarding
+- `client/src/pages/onboarding.tsx` - Multi-step onboarding flow
+- `client/src/lib/useProfile.tsx` - Profile hook with onboarding fields
+- `client/src/components/email-verification-modal.tsx` - Non-blocking email verification
+- `scripts/onboarding_migration.sql` - Profile schema updates for onboarding
 
 ### Core Pages
 - `client/src/pages/dashboard.tsx` - Main dashboard with impact stats
@@ -155,6 +164,36 @@ Required secrets:
 - Add data-testid attributes to interactive elements
 - Keep components in single files when under 200 lines
 
+## Onboarding Flow
+
+### Steps (in order):
+1. **Welcome** - Marketing intro + Continue button
+2. **Profile** - Avatar selection, display name (required), age range (required)
+3. **Mode** - Play as Individual or Join a Group
+4. **Interests** - Select up to 3 interests (required)
+5. **Permissions** - Location and notification toggles (optional)
+6. **Enter app** - Onboarding complete
+
+### Age Range Options:
+- 12 - 15
+- 16 - 20
+- 21 - 28
+- 29 - 35
+- 36 or older
+
+### Interest Options:
+- Nature & Outdoors
+- Energy Saver
+- Movement & Transport
+- Waste & Recycling
+- Community & Action
+- Mindful Living
+
+### Email Verification:
+- Non-blocking: Users can explore app before verifying
+- Modal appears on dashboard/profile if unverified
+- Remind again after 24 hours if dismissed
+
 ## Recent Changes (January 2026)
 - V1.2: Implemented Verified Pilot Mode
 - Integrated Strava OAuth for activity verification
@@ -164,3 +203,7 @@ Required secrets:
 - Updated leaderboard to read from database
 - Added Terms and Privacy pages
 - Added Settings page with Strava connection UI
+- V1.3: Implemented multi-step onboarding flow
+- Email verification now non-blocking (modal, not gate)
+- New users start with 0 credits/points
+- Admin access restricted to database role only

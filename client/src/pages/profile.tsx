@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useProfile } from "@/lib/useProfile";
+import { EmailVerificationBanner } from "@/components/email-verification-modal";
 import { useStore, BADGES } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -132,6 +133,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto pb-20 md:pb-0">
+      <EmailVerificationBanner />
       <Card className="bg-gradient-to-r from-card to-card/50 border-border overflow-hidden relative">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -181,6 +183,26 @@ export default function ProfilePage() {
               <div className="text-xs text-muted-foreground uppercase tracking-wider">Total XP</div>
             </div>
           </div>
+          
+          {/* Profile details from onboarding */}
+          {((profile as any)?.age_range || (profile as any)?.interests?.length > 0) && (
+            <div className="mt-6 pt-6 border-t border-border space-y-4">
+              {(profile as any)?.age_range && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Age Range:</span>
+                  <Badge variant="outline">{(profile as any).age_range}</Badge>
+                </div>
+              )}
+              {(profile as any)?.interests?.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Interests:</span>
+                  {(profile as any).interests.map((interest: string) => (
+                    <Badge key={interest} variant="secondary" className="text-xs">{interest}</Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

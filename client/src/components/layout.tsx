@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FeedbackButton from "@/components/feedback-button";
 
-const PUBLIC_PATHS = ['/auth', '/terms', '/privacy'];
+const PUBLIC_PATHS = ['/auth', '/terms', '/privacy', '/onboarding'];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -37,7 +37,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const user = profile || storeUser;
   const isPublicPath = PUBLIC_PATHS.some(path => location.startsWith(path));
+  const isOnboardingPath = location.startsWith('/onboarding');
   const isAuthenticated = !!(authUser || storeUser);
+  const needsOnboarding = profile && !profile.onboarding_complete;
   
   // Redirect unauthenticated users to auth page
   useEffect(() => {
@@ -45,6 +47,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       setLocation('/auth');
     }
   }, [initialized, isAuthenticated, isPublicPath, setLocation]);
+  
+  // Redirect users who need onboarding
+  useEffect(() => {
+    if (initialized && isAuthenticated && needsOnboarding && !isOnboardingPath && !isPublicPath) {
+      setLocation('/onboarding');
+    }
+  }, [initialized, isAuthenticated, needsOnboarding, isOnboardingPath, isPublicPath, setLocation]);
   
   const handleLogout = async () => {
     await signOut();

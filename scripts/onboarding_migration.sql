@@ -30,8 +30,24 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS enable_notifications BOOLEA
 -- Onboarding step tracking
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_step TEXT DEFAULT 'welcome';
 
--- Rename onboarding_completed to onboarding_complete for consistency
-ALTER TABLE public.profiles RENAME COLUMN onboarding_completed TO onboarding_complete;
+-- Rename onboarding_completed to onboarding_complete for consistency (if exists)
+DO $$ 
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'onboarding_completed'
+  ) THEN
+    ALTER TABLE public.profiles RENAME COLUMN onboarding_completed TO onboarding_complete;
+  ELSE
+    -- Add the column if it doesn't exist
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'onboarding_complete'
+    ) THEN
+      ALTER TABLE public.profiles ADD COLUMN onboarding_complete BOOLEAN DEFAULT false;
+    END IF;
+  END IF;
+END $$;
 
 -- Email verification dismissal tracking
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email_verify_dismissed_at TIMESTAMP WITH TIME ZONE;

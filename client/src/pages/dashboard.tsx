@@ -1,6 +1,7 @@
 import { useStore, ACTION_TYPES } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
 import { useProfile } from "@/lib/useProfile";
+import { EmailVerificationModal, EmailVerificationBanner } from "@/components/email-verification-modal";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -114,6 +115,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 pb-20 md:pb-0">
+      <EmailVerificationModal />
+      <EmailVerificationBanner />
       {/* Welcome & Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="md:col-span-2 bg-gradient-to-br from-primary/10 to-card border-primary/20">

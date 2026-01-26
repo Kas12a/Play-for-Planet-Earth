@@ -52,14 +52,13 @@ export default function AuthPage() {
       const { error } = await signIn(email, password);
       
       if (error) {
-        if (error.message.includes('Email not confirmed')) {
-          setError('Please verify your email before logging in. Check your inbox for the verification link.');
-        } else if (error.message.includes('Invalid login credentials')) {
+        if (error.message.includes('Invalid login credentials')) {
           setError('Invalid email or password. Please try again.');
         } else {
           setError(error.message);
         }
       } else {
+        // Let layout handle onboarding redirect
         setLocation("/");
       }
     } catch (err) {
@@ -81,7 +80,7 @@ export default function AuthPage() {
     }
 
     try {
-      const { error, needsVerification } = await signUp(email, password);
+      const { error } = await signUp(email, password);
       
       if (error) {
         if (error.message.includes('already registered')) {
@@ -89,10 +88,8 @@ export default function AuthPage() {
         } else {
           setError(error.message);
         }
-      } else if (needsVerification) {
-        setVerificationSent(true);
-        setVerificationEmail(email);
       } else {
+        // Skip email verification for pilot - go directly to onboarding
         setLocation("/onboarding");
       }
     } catch (err) {
