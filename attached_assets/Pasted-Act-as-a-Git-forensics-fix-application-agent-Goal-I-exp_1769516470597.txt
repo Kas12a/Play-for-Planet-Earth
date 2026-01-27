@@ -1,0 +1,65 @@
+Act as a Git forensics + fix-application agent.
+
+Goal:
+I expected commits e6d4851 and 303d434 on branch qa-fixes/2026-01-27, but my repo is on main (b94f73e) and those commits are “Not found”.
+Your job: (A) locate those commits/branch in ANY ref/remote/backup if they exist, OR (B) recreate/apply the changes cleanly and push to GitHub.
+
+Constraints:
+- Do not rewrite history on main.
+- Prefer creating a new branch for fixes.
+- Show command outputs for proof.
+
+PHASE 1: Forensics (find if the work exists anywhere)
+1) Run and print:
+- git status -sb
+- git remote -v
+- git fetch --all --prune
+- git branch -a
+- git show-ref --heads --tags
+- git log --all --oneline --decorate --grep="fail closed on config load failure" || true
+- git log --all --oneline --decorate --grep="document blocker/high status" || true
+- git log --all --oneline --decorate --grep="QA-002" || true
+- git log --all --oneline --decorate --grep="QA-004" || true
+
+2) Search remotes directly (do NOT assume branch names):
+- git ls-remote --heads origin | head -n 50
+- git ls-remote --heads origin | grep -i "qa-fixes" || true
+- git ls-remote --heads gitsafe-backup | grep -i "qa-fixes" || true
+
+3) If you find ANY remote branch that looks like the fixes:
+- git checkout -b qa-fixes-recovered <that-remote-branch>
+- git log --oneline --decorate -n 20
+- Confirm whether QA_REPORT.md contains QA-002 and QA-004 changes.
+- Push that branch to origin as: qa-fixes/2026-01-27 (or keep recovered name if already exists).
+
+PHASE 2: If the fixes do NOT exist anywhere, recreate them safely
+4) Create a new branch from current origin/main:
+- git checkout main
+- git reset --hard origin/main
+- git checkout -b qa-fixes/2026-01-27
+
+5) Recreate the intended changes from the Codex summary:
+A) Update QA_REPORT.md:
+- Add an explicit Blocker/High status note.
+- Add QA-004 entry describing that no Blocker/High issues are currently listed (as per the summary).
+Commit as: "chore: document blocker/high status (QA-004)"
+
+B) Implement QA-002 “fail closed on config load failure”:
+- Locate config loading code (search for config/env loading).
+- Ensure if config load fails, app fails closed gracefully (no crash loops), with a clear error and safe fallback.
+- Add minimal guard + safe error handling.
+Commit as: "fix: fail closed on config load failure (QA-002)"
+
+6) Verify:
+- npm run check (or the repo’s equivalent scripts)
+- Run the app briefly (web/dev) to ensure no immediate crash
+
+7) Push:
+- git push -u origin qa-fixes/2026-01-27
+
+PHASE 3: Final proof output
+Return:
+- current branch
+- last 10 commits
+- git diff --stat origin/main..HEAD
+- confirmation that qa-fixes/2026-01-27 exists on origin (use git ls-remote --heads origin | grep qa-fixes)
