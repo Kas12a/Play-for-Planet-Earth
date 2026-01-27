@@ -149,8 +149,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             );
           })()}
           <div className="min-w-0">
-            <span className="text-sm sm:text-base font-bold font-display tracking-tight block leading-tight whitespace-nowrap">Play for Planet</span>
-            <span className="text-[10px] text-foreground font-medium uppercase tracking-widest">Earth</span>
+            <span className="text-sm sm:text-base font-bold font-display tracking-tight leading-tight whitespace-nowrap">Play for Planet Earth</span>
           </div>
         </div>
         
@@ -220,8 +219,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             );
           })()}
           <div className="min-w-0">
-            <span className="font-bold font-display text-xs sm:text-sm block leading-tight whitespace-nowrap">Play for Planet</span>
-            <span className="text-[9px] text-foreground font-medium uppercase tracking-widest">Earth</span>
+            <span className="font-bold font-display text-xs sm:text-sm leading-tight whitespace-nowrap">Play for Planet Earth</span>
           </div>
           {isPilotMode && <Badge variant="outline" className="text-[9px] bg-blue-500/10 text-blue-400 border-blue-500/20 ml-1">PILOT</Badge>}
         </div>
@@ -257,8 +255,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   );
                 })()}
                 <div className="min-w-0">
-                  <span className="text-base sm:text-lg font-bold font-display block leading-tight whitespace-nowrap">Play for Planet</span>
-                  <span className="text-[10px] text-foreground font-medium uppercase tracking-widest">Earth</span>
+                  <span className="text-base sm:text-lg font-bold font-display leading-tight whitespace-nowrap">Play for Planet Earth</span>
                 </div>
               </div>
               <nav className="flex flex-col gap-2">
