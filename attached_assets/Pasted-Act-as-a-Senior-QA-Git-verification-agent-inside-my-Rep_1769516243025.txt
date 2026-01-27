@@ -1,0 +1,54 @@
+Act as a Senior QA + Git verification agent inside my Replit workspace.
+
+Goal: verify whether the changes from branch `qa-fixes/2026-01-27` are actually applied in this workspace, and whether they exist locally, remotely (GitHub), and in the running app.
+
+Do NOT assume anything. Prove it with commands + outputs.
+
+STEP 1) Git truth check (local)
+Run and print outputs:
+- git status -sb
+- git branch --show-current
+- git branch -vv
+- git rev-parse HEAD
+- git log --oneline --decorate -n 15
+- git show --name-only --oneline e6d4851
+- git show --name-only --oneline 303d434
+- git diff --stat HEAD~2..HEAD
+
+If I am NOT on `qa-fixes/2026-01-27`, checkout it:
+- git checkout qa-fixes/2026-01-27
+
+STEP 2) File-level verification
+Open and show the exact lines changed in `QA_REPORT.md` that correspond to:
+- QA-002 “fail closed on config load failure”
+- QA-004 “document blocker/high status”
+Use a diff view:
+- git diff HEAD~2..HEAD -- QA_REPORT.md
+Then confirm the entries exist in the current file content (search in file).
+
+STEP 3) Remote verification (if remote exists)
+Run and print:
+- git remote -v
+- git fetch --all --prune
+If an origin remote exists:
+- git ls-remote --heads origin | grep "qa-fixes/2026-01-27" || true
+- git log --oneline qa-fixes/2026-01-27..origin/qa-fixes/2026-01-27 2>/dev/null || true
+If no remote exists, clearly say: “Remote not configured, can’t confirm GitHub state.”
+
+STEP 4) Build/runtime verification
+Based on package.json, run the repo’s standard checks and show results:
+- npm install (if needed)
+- npm run check OR (npm run lint && npm run typecheck && npm test) depending on scripts
+Then start the app (web or client as supported) and confirm no immediate crash.
+Also scan logs for:
+- unhandled promise rejections
+- red screen / runtime errors
+
+STEP 5) Final verdict (single clear summary)
+Return a short verdict with:
+- Current branch + HEAD commit
+- Whether e6d4851 and 303d434 are present in history
+- Whether QA_REPORT.md contains the intended changes
+- Whether checks pass
+- Whether remote branch exists (if remote configured)
+- Any remaining risk or mismatch found
