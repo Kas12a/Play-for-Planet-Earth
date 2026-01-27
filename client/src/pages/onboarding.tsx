@@ -220,9 +220,8 @@ export default function OnboardingPage() {
                 <Leaf className="w-12 h-12 text-primary-foreground" />
               </div>
               <CardTitle className="text-4xl font-display">
-                <span className="gradient-text">Play for Planet</span>
+                <span className="gradient-text">Play for Planet Earth</span>
               </CardTitle>
-              <p className="text-lg font-display text-primary font-medium mt-1">Earth</p>
               <CardDescription className="text-base mt-4 leading-relaxed">
                 Turn everyday eco-actions into verified impact. Connect your fitness apps, 
                 join challenges, and help make a difference.

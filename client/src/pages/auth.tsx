@@ -478,10 +478,9 @@ export default function AuthPage() {
           <div className="w-20 h-20 bg-gradient-to-br from-primary to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-10 shadow-[0_0_50px_rgba(34,197,94,0.4)] rotate-3 hover:rotate-0 transition-transform duration-500">
             <Leaf className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="text-5xl font-bold font-display mb-2 tracking-tight">
-            <span className="gradient-text">Play for Planet</span>
+          <h1 className="text-5xl font-bold font-display mb-6 tracking-tight">
+            <span className="gradient-text">Play for Planet Earth</span>
           </h1>
-          <p className="text-2xl font-display text-primary font-medium mb-6">Earth</p>
           <p className="text-xl text-muted-foreground leading-relaxed">
             Log eco-actions, earn rewards, and join a global community making a real impact.
           </p>
@@ -494,8 +493,7 @@ export default function AuthPage() {
             <div className="w-14 h-14 bg-gradient-to-br from-primary to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg rotate-3">
               <Leaf className="w-7 h-7 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold font-display gradient-text">Play for Planet</h1>
-            <p className="text-sm font-medium text-primary uppercase tracking-widest">Earth</p>
+            <h1 className="text-2xl font-bold font-display gradient-text">Play for Planet Earth</h1>
           </div>
 
           <Tabs defaultValue="login" className="w-full">
