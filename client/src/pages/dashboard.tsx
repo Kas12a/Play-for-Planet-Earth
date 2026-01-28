@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Leaf, 
   Flame, 
@@ -22,31 +23,82 @@ import {
   Coins,
   TrendingUp,
   Cloud,
-  Trash2
+  Trash2,
+  Activity,
+  Timer,
+  Route,
+  Loader2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Legend
 } from "recharts";
 
+interface ActivityEvent {
+  id: string;
+  user_id: string;
+  provider: string;
+  activity_type: string;
+  start_time: string;
+  duration_minutes: number;
+  distance_meters: number | null;
+  calories: number | null;
+  points_awarded: number;
+  title: string | null;
+}
+
 export default function DashboardPage() {
-  const { user: authUser, initialized } = useAuth();
+  const { user: authUser, initialized, session } = useAuth();
   const { profile } = useProfile();
   const { user: storeUser, actions, transactions } = useStore();
   const [, setLocation] = useLocation();
+  const [fitnessActivities, setFitnessActivities] = useState<ActivityEvent[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
 
   useEffect(() => {
     if (initialized && !authUser) {
       setLocation("/auth");
     }
   }, [authUser, initialized, setLocation]);
+
+  useEffect(() => {
+    async function fetchActivities() {
+      if (!session?.access_token) {
+        setActivitiesLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/activities', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFitnessActivities(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch activities:', err);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    }
+    if (initialized && authUser) {
+      fetchActivities();
+    }
+  }, [initialized, authUser, session?.access_token]);
 
   if (!initialized) {
     return (
@@ -114,6 +166,55 @@ export default function DashboardPage() {
     
     return { day, credits: dayCredits };
   });
+
+  // Process fitness activities for progress chart
+  const processedFitnessData = (() => {
+    if (fitnessActivities.length === 0) return [];
+    
+    // Group activities by date (last 7 days)
+    const last7Days: Record<string, { distance: number; duration: number; calories: number; count: number }> = {};
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Initialize last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      last7Days[key] = { distance: 0, duration: 0, calories: 0, count: 0 };
+    }
+    
+    // Aggregate activities by day
+    for (const activity of fitnessActivities) {
+      const activityDate = new Date(activity.start_time).toISOString().split('T')[0];
+      if (last7Days[activityDate]) {
+        last7Days[activityDate].distance += (activity.distance_meters || 0) / 1000; // Convert to km
+        last7Days[activityDate].duration += activity.duration_minutes;
+        last7Days[activityDate].calories += activity.calories || 0;
+        last7Days[activityDate].count += 1;
+      }
+    }
+    
+    // Convert to chart format
+    return Object.entries(last7Days).map(([dateStr, data]) => {
+      const date = new Date(dateStr);
+      return {
+        day: dayNames[date.getDay()],
+        date: dateStr,
+        distance: Math.round(data.distance * 10) / 10,
+        duration: Math.round(data.duration),
+        calories: Math.round(data.calories),
+        activities: data.count,
+      };
+    });
+  })();
+
+  // Calculate fitness totals
+  const fitnessTotals = fitnessActivities.reduce((acc, activity) => ({
+    totalDistance: acc.totalDistance + ((activity.distance_meters || 0) / 1000),
+    totalDuration: acc.totalDuration + activity.duration_minutes,
+    totalCalories: acc.totalCalories + (activity.calories || 0),
+    totalActivities: acc.totalActivities + 1,
+  }), { totalDistance: 0, totalDuration: 0, totalCalories: 0, totalActivities: 0 });
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 pb-24 md:pb-0">
@@ -316,6 +417,142 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fitness Progress Chart */}
+      <Card className="glass-card" data-testid="card-progress-chart">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Fitness Progress
+            </CardTitle>
+            <Badge variant="outline" className="text-xs">Last 7 Days</Badge>
+          </div>
+          <CardDescription>Track your fitness activities over time</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activitiesLoading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : fitnessActivities.length === 0 ? (
+            <div className="text-center py-12">
+              <Activity className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+              <h3 className="font-semibold text-lg mb-2">No fitness data yet</h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-4">
+                Connect your Strava account to start tracking your fitness activities and see your progress here.
+              </p>
+              <Link href="/settings">
+                <Button variant="outline" size="sm">
+                  Connect Strava
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Fitness Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Route className="w-4 h-4 text-blue-400" />
+                    <span className="text-xs text-muted-foreground">Distance</span>
+                  </div>
+                  <div className="text-xl font-bold font-mono text-blue-400">
+                    {fitnessTotals.totalDistance.toFixed(1)} <span className="text-xs font-normal">km</span>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Timer className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs text-muted-foreground">Duration</span>
+                  </div>
+                  <div className="text-xl font-bold font-mono text-purple-400">
+                    {Math.round(fitnessTotals.totalDuration)} <span className="text-xs font-normal">min</span>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Flame className="w-4 h-4 text-orange-400" />
+                    <span className="text-xs text-muted-foreground">Calories</span>
+                  </div>
+                  <div className="text-xl font-bold font-mono text-orange-400">
+                    {Math.round(fitnessTotals.totalCalories)} <span className="text-xs font-normal">kcal</span>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs text-muted-foreground">Activities</span>
+                  </div>
+                  <div className="text-xl font-bold font-mono text-emerald-400">
+                    {fitnessTotals.totalActivities}
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart Tabs */}
+              <Tabs defaultValue="distance" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="distance" className="text-xs sm:text-sm" data-testid="tab-distance">Distance</TabsTrigger>
+                  <TabsTrigger value="duration" className="text-xs sm:text-sm" data-testid="tab-duration">Duration</TabsTrigger>
+                  <TabsTrigger value="calories" className="text-xs sm:text-sm" data-testid="tab-calories">Calories</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="distance" className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={processedFitnessData}>
+                      <defs>
+                        <linearGradient id="distanceGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}km`} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                        formatter={(value: number) => [`${value} km`, 'Distance']}
+                      />
+                      <Area type="monotone" dataKey="distance" stroke="#3b82f6" strokeWidth={2} fill="url(#distanceGradient)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+
+                <TabsContent value="duration" className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={processedFitnessData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}m`} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                        formatter={(value: number) => [`${value} min`, 'Duration']}
+                      />
+                      <Bar dataKey="duration" fill="#a855f7" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+
+                <TabsContent value="calories" className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={processedFitnessData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                        formatter={(value: number) => [`${value} kcal`, 'Calories']}
+                      />
+                      <Line type="monotone" dataKey="calories" stroke="#f97316" strokeWidth={2} dot={{ fill: '#f97316', r: 4 }} activeDot={{ r: 6, fill: "white", stroke: '#f97316', strokeWidth: 2 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick Actions List */}
       <div className="space-y-4">
