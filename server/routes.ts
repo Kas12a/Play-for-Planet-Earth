@@ -572,6 +572,344 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // WORKOUT PLANNER ENDPOINTS
+  // ============================================
+
+  // Get all workout plans for a user
+  app.get("/api/workouts/plans", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { data: plans } = await supabaseAdmin
+        .from('workout_plans')
+        .select('*, workout_exercises(*)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      res.json(plans || []);
+    } catch (error) {
+      console.error('Get workout plans error:', error);
+      res.status(500).json({ error: 'Failed to get workout plans' });
+    }
+  });
+
+  // Create a new workout plan
+  app.post("/api/workouts/plans", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { name, description, difficulty, targetDaysPerWeek, exercises } = req.body;
+
+      if (!name || !difficulty) {
+        return res.status(400).json({ error: 'Name and difficulty are required' });
+      }
+
+      // Create the plan
+      const { data: plan, error: planError } = await supabaseAdmin
+        .from('workout_plans')
+        .insert({
+          user_id: user.id,
+          name,
+          description: description || null,
+          difficulty,
+          target_days_per_week: targetDaysPerWeek || 3,
+        })
+        .select()
+        .single();
+
+      if (planError) {
+        console.error('Create plan error:', planError);
+        return res.status(500).json({ error: 'Failed to create workout plan' });
+      }
+
+      // Add exercises if provided
+      if (exercises && exercises.length > 0) {
+        const exerciseRecords = exercises.map((ex: any, idx: number) => ({
+          plan_id: plan.id,
+          name: ex.name,
+          exercise_type: ex.exerciseType || 'strength',
+          sets: ex.sets || 3,
+          reps: ex.reps || null,
+          duration_minutes: ex.durationMinutes || null,
+          rest_seconds: ex.restSeconds || 60,
+          notes: ex.notes || null,
+          sort_order: idx,
+        }));
+
+        await supabaseAdmin
+          .from('workout_exercises')
+          .insert(exerciseRecords);
+      }
+
+      // Fetch the complete plan with exercises
+      const { data: completePlan } = await supabaseAdmin
+        .from('workout_plans')
+        .select('*, workout_exercises(*)')
+        .eq('id', plan.id)
+        .single();
+
+      res.json(completePlan);
+    } catch (error) {
+      console.error('Create workout plan error:', error);
+      res.status(500).json({ error: 'Failed to create workout plan' });
+    }
+  });
+
+  // Update a workout plan
+  app.put("/api/workouts/plans/:planId", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { planId } = req.params;
+      const { name, description, difficulty, targetDaysPerWeek, isActive } = req.body;
+
+      const { data: plan, error: updateError } = await supabaseAdmin
+        .from('workout_plans')
+        .update({
+          name,
+          description,
+          difficulty,
+          target_days_per_week: targetDaysPerWeek,
+          is_active: isActive,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', planId)
+        .eq('user_id', user.id)
+        .select('*, workout_exercises(*)')
+        .single();
+
+      if (updateError) {
+        console.error('Update plan error:', updateError);
+        return res.status(500).json({ error: 'Failed to update workout plan' });
+      }
+
+      res.json(plan);
+    } catch (error) {
+      console.error('Update workout plan error:', error);
+      res.status(500).json({ error: 'Failed to update workout plan' });
+    }
+  });
+
+  // Delete a workout plan
+  app.delete("/api/workouts/plans/:planId", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { planId } = req.params;
+
+      const { error: deleteError } = await supabaseAdmin
+        .from('workout_plans')
+        .delete()
+        .eq('id', planId)
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        console.error('Delete plan error:', deleteError);
+        return res.status(500).json({ error: 'Failed to delete workout plan' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete workout plan error:', error);
+      res.status(500).json({ error: 'Failed to delete workout plan' });
+    }
+  });
+
+  // Log a workout session
+  app.post("/api/workouts/sessions", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { planId, name, durationMinutes, caloriesBurned, notes, exerciseLogs } = req.body;
+
+      if (!name || !durationMinutes) {
+        return res.status(400).json({ error: 'Name and duration are required' });
+      }
+
+      // Create the session
+      const { data: session, error: sessionError } = await supabaseAdmin
+        .from('workout_sessions')
+        .insert({
+          user_id: user.id,
+          plan_id: planId || null,
+          name,
+          duration_minutes: durationMinutes,
+          calories_burned: caloriesBurned || null,
+          notes: notes || null,
+        })
+        .select()
+        .single();
+
+      if (sessionError) {
+        console.error('Create session error:', sessionError);
+        return res.status(500).json({ error: 'Failed to log workout session' });
+      }
+
+      // Add exercise logs if provided
+      if (exerciseLogs && exerciseLogs.length > 0) {
+        const logRecords = exerciseLogs.map((log: any) => ({
+          session_id: session.id,
+          exercise_name: log.exerciseName,
+          sets_completed: log.setsCompleted || null,
+          reps_completed: log.repsCompleted || null,
+          weight_kg: log.weightKg || null,
+          duration_minutes: log.durationMinutes || null,
+          notes: log.notes || null,
+        }));
+
+        await supabaseAdmin
+          .from('exercise_logs')
+          .insert(logRecords);
+      }
+
+      // Award points for completing a workout (5 points per workout)
+      await supabaseAdmin
+        .from('points_ledger')
+        .insert({
+          user_id: user.id,
+          points: 5,
+          reason: `Workout completed: ${name}`,
+          source: 'workout',
+          client_request_id: `workout_${session.id}`,
+        });
+
+      res.json({ success: true, session, pointsEarned: 5 });
+    } catch (error) {
+      console.error('Log workout session error:', error);
+      res.status(500).json({ error: 'Failed to log workout session' });
+    }
+  });
+
+  // Get workout sessions
+  app.get("/api/workouts/sessions", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { data: sessions } = await supabaseAdmin
+        .from('workout_sessions')
+        .select('*, exercise_logs(*)')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false })
+        .limit(50);
+
+      res.json(sessions || []);
+    } catch (error) {
+      console.error('Get workout sessions error:', error);
+      res.status(500).json({ error: 'Failed to get workout sessions' });
+    }
+  });
+
+  // Get workout stats
+  app.get("/api/workouts/stats", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      // Get total sessions and time
+      const { data: sessions } = await supabaseAdmin
+        .from('workout_sessions')
+        .select('duration_minutes, calories_burned, completed_at')
+        .eq('user_id', user.id);
+
+      const totalSessions = sessions?.length || 0;
+      const totalMinutes = sessions?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0;
+      const totalCalories = sessions?.reduce((sum, s) => sum + (s.calories_burned || 0), 0) || 0;
+
+      // Get sessions this week
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const sessionsThisWeek = sessions?.filter(s => new Date(s.completed_at) >= weekAgo).length || 0;
+
+      // Get active plans count
+      const { count: activePlans } = await supabaseAdmin
+        .from('workout_plans')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      res.json({
+        totalSessions,
+        totalMinutes,
+        totalCalories,
+        sessionsThisWeek,
+        activePlans: activePlans || 0,
+      });
+    } catch (error) {
+      console.error('Get workout stats error:', error);
+      res.status(500).json({ error: 'Failed to get workout stats' });
+    }
+  });
+
   // Register object storage routes for file uploads
   registerObjectStorageRoutes(app);
 

@@ -25,7 +25,8 @@ import {
   Bike,
   Recycle,
   Sparkles,
-  User
+  User,
+  Dumbbell
 } from "lucide-react";
 
 const AVATARS: Record<string, { icon: typeof Leaf; color: string }> = {
@@ -109,6 +110,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: "Dashboard", icon: LayoutDashboard, href: "/", enabled: true },
     { label: "Actions", icon: ListTodo, href: "/actions", enabled: config?.ENABLE_ACTIONS },
     { label: "Quests", icon: Trophy, href: "/quests", enabled: config?.ENABLE_QUESTS },
+    { label: "Workouts", icon: Dumbbell, href: "/workouts", enabled: true },
     { label: "Leaderboard", icon: ChartBar, href: "/leaderboard", enabled: config?.ENABLE_LEADERBOARD },
     { label: "Learn", icon: GraduationCap, href: "/learn", enabled: config?.ENABLE_LEARN },
     { label: "Credits", icon: Coins, href: "/credits", enabled: config?.ENABLE_CREDITS },
