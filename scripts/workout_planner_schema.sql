@@ -1,5 +1,10 @@
 -- PfPE Workout Planner Schema
--- Run this AFTER the main supabase_schema.sql
+-- Run this AFTER the main supabase_schema.sql and verified_pilot_schema.sql
+
+-- Update points_ledger source constraint to include 'workout'
+ALTER TABLE public.points_ledger DROP CONSTRAINT IF EXISTS points_ledger_source_check;
+ALTER TABLE public.points_ledger ADD CONSTRAINT points_ledger_source_check 
+  CHECK (source IN ('verified_strava', 'verified_fitbit', 'verified_google_fit', 'self_declared', 'quest_completion', 'lesson_completion', 'bonus', 'penalty', 'workout'));
 
 -- ============================================
 -- WORKOUT PLANS

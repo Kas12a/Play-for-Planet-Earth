@@ -210,3 +210,9 @@ Required secrets:
 - User avatar displays in sidebar/header (from onboarding selection)
 - App branding: "Play for Planet Earth" in all headers
 - Profile picture upload: Users can upload custom photos (replaces avatar icon)
+
+## Recent Changes (February 2026)
+- Added Fitness Progress Chart on dashboard (distance, duration, calories visualization)
+- Integrated Workout Planner feature with plan creation, exercise management, and session logging
+- Users earn 5 points per completed workout session
+- Workout stats tracking (total sessions, hours trained, calories burned, weekly progress)

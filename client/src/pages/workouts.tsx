@@ -34,12 +34,13 @@ import {
 interface WorkoutExercise {
   id?: string;
   name: string;
-  exerciseType: 'cardio' | 'strength' | 'flexibility' | 'balance' | 'hiit';
+  exercise_type: 'cardio' | 'strength' | 'flexibility' | 'balance' | 'hiit';
   sets: number;
   reps?: number;
-  durationMinutes?: number;
-  restSeconds: number;
+  duration_minutes?: number;
+  rest_seconds: number;
   notes?: string;
+  sort_order?: number;
 }
 
 interface WorkoutPlan {
@@ -166,10 +167,10 @@ export default function WorkoutsPage() {
   const handleAddExercise = () => {
     setPlanExercises([...planExercises, {
       name: "",
-      exerciseType: "strength",
+      exercise_type: "strength",
       sets: 3,
       reps: 10,
-      restSeconds: 60,
+      rest_seconds: 60,
     }]);
   };
 
@@ -213,7 +214,15 @@ export default function WorkoutsPage() {
           description: planDescription,
           difficulty: planDifficulty,
           targetDaysPerWeek: planDaysPerWeek,
-          exercises: validExercises,
+          exercises: validExercises.map(ex => ({
+            name: ex.name,
+            exerciseType: ex.exercise_type,
+            sets: ex.sets,
+            reps: ex.reps,
+            durationMinutes: ex.duration_minutes,
+            restSeconds: ex.rest_seconds,
+            notes: ex.notes,
+          })),
         }),
       });
 
@@ -526,8 +535,8 @@ export default function WorkoutsPage() {
                             <div className="space-y-1">
                               <Label className="text-xs">Type</Label>
                               <Select 
-                                value={exercise.exerciseType} 
-                                onValueChange={(v: any) => handleExerciseChange(index, 'exerciseType', v)}
+                                value={exercise.exercise_type} 
+                                onValueChange={(v: any) => handleExerciseChange(index, 'exercise_type', v)}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -566,8 +575,8 @@ export default function WorkoutsPage() {
                                 type="number" 
                                 min={1}
                                 placeholder="—"
-                                value={exercise.durationMinutes || ""}
-                                onChange={(e) => handleExerciseChange(index, 'durationMinutes', e.target.value ? parseInt(e.target.value) : undefined)}
+                                value={exercise.duration_minutes || ""}
+                                onChange={(e) => handleExerciseChange(index, 'duration_minutes', e.target.value ? parseInt(e.target.value) : undefined)}
                               />
                             </div>
                             <div className="space-y-1">
@@ -575,8 +584,8 @@ export default function WorkoutsPage() {
                               <Input 
                                 type="number" 
                                 min={0}
-                                value={exercise.restSeconds}
-                                onChange={(e) => handleExerciseChange(index, 'restSeconds', parseInt(e.target.value) || 0)}
+                                value={exercise.rest_seconds}
+                                onChange={(e) => handleExerciseChange(index, 'rest_seconds', parseInt(e.target.value) || 0)}
                               />
                             </div>
                           </div>
