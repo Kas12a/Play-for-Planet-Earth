@@ -216,22 +216,51 @@ Required secrets:
 - Integrated Workout Planner feature with plan creation, exercise management, and session logging
 - Users earn 5 points per completed workout session
 - Workout stats tracking (total sessions, hours trained, calories burned, weekly progress)
-- V1.4: Quest system overhaul with new verification types
-- Added Health Data Source setting to profile (Apple Health, Google Fit, Samsung Health)
-- New quests with healthKit verification (10-Day Step Streak, Green Commute, Active Minutes)
-- New quests with video verification (Park Clean-Up, Bring Your Own Cup, Upcycle/Repair Demo)
-- Video submission dialog with upload functionality for video quests
-- Quest UI updated with verification type badges (Health Data / Video Proof)
+- V1.5: Pilot Quest Pack overhaul (12 verifiable quests)
+- Replaced all quests with Pilot Quest Pack for verifiable actions
+- Added Today's Code anti-cheat mechanic (rotating daily code: WORD-NN format)
+- GPS Session flow with start/stop timer and minimum duration enforcement
+- Proof submission flow for video/photo/screenshot uploads
+- Eco Quiz verification with 5 daily questions
+- Health App Preference renamed (now clearly "preference only, sync coming in native app")
+- Added ENABLE_HEALTH_SYNC feature flag (default false)
 
 ## Quest Verification Types
 
 | Type | Description | Quests |
 |------|-------------|--------|
-| healthKit | Verified via connected health app | Step Streak, Green Commute, Active Minutes |
-| video | Requires video submission with code word | Park Clean-Up, Reuse Cup, Upcycle Demo |
-| strava | Verified via Strava connection | (future) |
-| manual | Self-declared, no verification | (legacy) |
+| gps_session | GPS tracked session with min duration | Walk Instead, Green Time, Cycle Session |
+| proof_video | Video upload with Today's Code | Refill Ritual, No Bag, Litter Sprint, Plant Meal, Share Quest |
+| screenshot_health | Health app screenshot with Today's Code | Planet Steps Mini, Big Steps Week |
+| quiz | In-app quiz completion | Eco Knowledge Spark, Buddy Challenge |
+
+## Pilot Quest Pack (12 Quests)
+
+### Daily Quests
+1. Planet Steps Mini (40 pts) - 4,000 steps screenshot
+2. Walk Instead (60 pts) - 12-min GPS walk
+3. Refill Ritual (30 pts) - Reusable bottle video
+4. No Bag Mission (30 pts) - Refuse plastic bag video
+5. Eco Knowledge Spark (20 pts) - 5-question quiz
+6. Green Time (25 pts) - 15-min outdoor GPS session
+
+### Weekly Quests
+7. Big Steps Week (120 pts) - 30,000 steps screenshot
+8. Cycle Session (140 pts) - 20-min GPS cycling
+9. Litter Sprint (150 pts) - Litter collection video
+10. Plant-Based Meal (80 pts) - Plant meal video
+
+### Seasonal Quests
+11. Share Your Quest (100 pts) - Social share video
+12. Buddy Challenge (200 pts) - Invite friend quiz
+
+## Today's Code Anti-Cheat
+- Daily rotating code in format: WORD-NN (e.g., MOSS-17)
+- Generated deterministically by UTC date for consistency
+- Required in proof videos/photos for quests with `anti_cheat_requires_daily_code=true`
+- Displayed prominently on Quests page and proof submission dialogs
 
 ## New Schema Files
 - `scripts/health_data_source_migration.sql` - Adds health_data_source column to profiles
 - `scripts/video_submissions_schema.sql` - Video submissions table for quest verification
+- `scripts/pilot_quest_schema.sql` - GPS sessions, proof submissions, quiz completions tables

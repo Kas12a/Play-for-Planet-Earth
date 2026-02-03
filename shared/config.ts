@@ -10,6 +10,7 @@ export const config = {
   ENABLE_ACTIONS: true,
   ENABLE_QUESTS: true,
   ENABLE_LEADERBOARD: true,
+  ENABLE_HEALTH_SYNC: false, // When true, shows health app connect buttons (for future native app)
   
   ADMIN_EMAIL: 'info@playearth.co.uk',
   

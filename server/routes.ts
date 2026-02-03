@@ -441,6 +441,274 @@ export async function registerRoutes(
     }
   });
 
+  // Submit proof (photo/video/screenshot) for a quest
+  app.post("/api/quests/:questId/submit-proof", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { questId } = req.params;
+      const { proofPath, proofType, notes } = req.body;
+
+      if (!proofPath) {
+        return res.status(400).json({ error: 'Proof file is required' });
+      }
+
+      // Check if user has joined this quest
+      const { data: participation } = await supabaseAdmin
+        .from('quest_participants')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .single();
+
+      if (!participation) {
+        return res.status(400).json({ error: 'You must join the quest first' });
+      }
+
+      // Insert proof submission
+      const { error: insertError } = await supabaseAdmin
+        .from('proof_submissions')
+        .insert({
+          user_id: user.id,
+          quest_id: questId,
+          proof_path: proofPath,
+          proof_type: proofType,
+          notes: notes || null,
+          status: 'pending',
+        });
+
+      if (insertError) {
+        console.error('Proof submission error:', insertError);
+        return res.status(500).json({ error: 'Failed to submit proof' });
+      }
+
+      res.json({ success: true, message: 'Proof submitted for review' });
+    } catch (error) {
+      console.error('Proof submission error:', error);
+      res.status(500).json({ error: 'Failed to submit proof' });
+    }
+  });
+
+  // Submit GPS session for a quest
+  app.post("/api/quests/:questId/gps-session", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { questId } = req.params;
+      const { duration_sec, distance_m, start_time, end_time } = req.body;
+
+      // Minimum duration validation based on quest
+      const minDurations: Record<string, number> = {
+        'pilot_walk_instead': 720, // 12 min
+        'pilot_green_time': 900, // 15 min
+        'pilot_cycle_session': 1200, // 20 min
+      };
+      const minDuration = minDurations[questId] || 600; // default 10 min
+
+      if (duration_sec < minDuration) {
+        return res.status(400).json({ 
+          error: `Minimum duration not met. Required: ${Math.floor(minDuration / 60)} minutes` 
+        });
+      }
+
+      // Check if user has joined this quest
+      const { data: participation } = await supabaseAdmin
+        .from('quest_participants')
+        .select('id, completed')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .single();
+
+      if (!participation) {
+        return res.status(400).json({ error: 'You must join the quest first' });
+      }
+
+      // Insert GPS session record
+      const { error: insertError } = await supabaseAdmin
+        .from('gps_sessions')
+        .insert({
+          user_id: user.id,
+          quest_id: questId,
+          duration_sec,
+          distance_m: distance_m || 0,
+          start_time,
+          end_time,
+          status: 'approved', // GPS sessions auto-approved
+        });
+
+      if (insertError) {
+        console.error('GPS session error:', insertError);
+        return res.status(500).json({ error: 'Failed to save session' });
+      }
+
+      // Get quest points
+      const questPoints: Record<string, number> = {
+        'pilot_walk_instead': 60,
+        'pilot_green_time': 25,
+        'pilot_cycle_session': 140,
+      };
+      const points = questPoints[questId] || 50;
+
+      // Award points
+      await supabaseAdmin
+        .from('points_ledger')
+        .insert({
+          user_id: user.id,
+          source: 'gps_session',
+          source_id: questId,
+          points_earned: points,
+        });
+
+      // Update user's total points
+      await supabaseAdmin.rpc('increment_user_points', { 
+        user_id_param: user.id, 
+        points_param: points 
+      });
+
+      // Mark quest as completed
+      await supabaseAdmin
+        .from('quest_participants')
+        .update({ completed: true, progress: 100 })
+        .eq('id', participation.id);
+
+      res.json({ success: true, points_earned: points });
+    } catch (error) {
+      console.error('GPS session error:', error);
+      res.status(500).json({ error: 'Failed to save session' });
+    }
+  });
+
+  // Complete quiz for a quest
+  app.post("/api/quests/:questId/complete-quiz", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { questId } = req.params;
+      const { score, total } = req.body;
+
+      // Check if user has joined this quest
+      const { data: participation } = await supabaseAdmin
+        .from('quest_participants')
+        .select('id, completed')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .single();
+
+      if (!participation) {
+        return res.status(400).json({ error: 'You must join the quest first' });
+      }
+
+      if (participation.completed) {
+        return res.status(400).json({ error: 'Quiz already completed today' });
+      }
+
+      // Insert quiz completion record
+      const { error: insertError } = await supabaseAdmin
+        .from('quiz_completions')
+        .insert({
+          user_id: user.id,
+          quest_id: questId,
+          score,
+          total_questions: total,
+        });
+
+      if (insertError) {
+        console.error('Quiz completion error:', insertError);
+        return res.status(500).json({ error: 'Failed to save quiz completion' });
+      }
+
+      // Get quest points
+      const questPoints: Record<string, number> = {
+        'pilot_quiz_spark': 20,
+        'pilot_buddy_challenge': 200,
+      };
+      const points = questPoints[questId] || 20;
+
+      // Award points
+      await supabaseAdmin
+        .from('points_ledger')
+        .insert({
+          user_id: user.id,
+          source: 'quiz',
+          source_id: questId,
+          points_earned: points,
+        });
+
+      // Update user's total points
+      await supabaseAdmin.rpc('increment_user_points', { 
+        user_id_param: user.id, 
+        points_param: points 
+      });
+
+      // Mark quest as completed
+      await supabaseAdmin
+        .from('quest_participants')
+        .update({ completed: true, progress: 100 })
+        .eq('id', participation.id);
+
+      res.json({ success: true, points_earned: points });
+    } catch (error) {
+      console.error('Quiz completion error:', error);
+      res.status(500).json({ error: 'Failed to save quiz completion' });
+    }
+  });
+
+  // Get Today's Code (server-side for consistency)
+  app.get("/api/todays-code", (req, res) => {
+    const now = new Date();
+    const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    
+    const CODE_WORDS = [
+      'MOSS', 'LEAF', 'TREE', 'WAVE', 'GAIA', 'BLOOM', 'SEED', 'RAIN',
+      'WIND', 'FERN', 'PINE', 'OCEAN', 'CORAL', 'EARTH', 'GREEN', 'SOLAR',
+      'LUNA', 'STAR', 'CLOUD', 'RIVER', 'FOREST', 'MEADOW', 'VALLEY', 'PEAK',
+      'GLACIER', 'REEF', 'OASIS', 'PRAIRIE', 'DELTA', 'ARCTIC', 'TROPIC'
+    ];
+    
+    const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 0));
+    const diff = utcDate.getTime() - startOfYear.getTime();
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    const wordIndex = (dayOfYear + now.getUTCFullYear()) % CODE_WORDS.length;
+    const word = CODE_WORDS[wordIndex];
+    const numberSeed = (dayOfYear * 7 + now.getUTCFullYear() * 3) % 90 + 10;
+    
+    res.json({ 
+      code: `${word}-${numberSeed}`,
+      expires_at: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0)).toISOString()
+    });
+  });
+
   // Get user's quest participations
   app.get("/api/quests/my", async (req, res) => {
     try {

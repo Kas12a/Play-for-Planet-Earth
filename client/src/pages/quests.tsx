@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { QUESTS, Quest } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
-import { useProfile, HealthDataSource } from "@/lib/useProfile";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ArrowRight, CheckCircle, Loader2, Shield, Video, Heart, AlertCircle } from "lucide-react";
+import { Clock, ArrowRight, CheckCircle, Loader2, Video, Image, MapPin, Sparkles, Calendar, Users, Leaf, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useLocation } from "wouter";
-import { VideoSubmissionDialog } from "@/components/video-submission-dialog";
+import { TodaysCodeDisplay } from "@/components/todays-code-display";
+import { ProofSubmissionDialog } from "@/components/proof-submission-dialog";
+import { GpsSessionDialog } from "@/components/gps-session-dialog";
+import { EcoQuizDialog } from "@/components/eco-quiz-dialog";
 
 interface QuestParticipation {
   quest_id: string;
@@ -18,17 +18,32 @@ interface QuestParticipation {
   joined_at: string;
 }
 
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  movement: <MapPin className="w-3 h-3" />,
+  waste: <Leaf className="w-3 h-3" />,
+  learning: <Sparkles className="w-3 h-3" />,
+  wellbeing: <Users className="w-3 h-3" />,
+  food: <Leaf className="w-3 h-3" />,
+  community: <Users className="w-3 h-3" />,
+};
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  seasonal: "This Season",
+};
+
 export default function QuestsPage() {
   const { toast } = useToast();
   const { session } = useAuth();
-  const { profile } = useProfile();
-  const [, setLocation] = useLocation();
-  const [joinedQuests, setJoinedQuests] = useState<Set<string>>(new Set());
+  const [joinedQuests, setJoinedQuests] = useState<Map<string, QuestParticipation>>(new Map());
   const [loadingQuest, setLoadingQuest] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showHealthPrompt, setShowHealthPrompt] = useState(false);
-  const [videoQuestId, setVideoQuestId] = useState<string | null>(null);
-  const [videoQuestTitle, setVideoQuestTitle] = useState("");
+  
+  // Dialog states
+  const [proofQuest, setProofQuest] = useState<Quest | null>(null);
+  const [gpsQuest, setGpsQuest] = useState<Quest | null>(null);
+  const [quizQuest, setQuizQuest] = useState<Quest | null>(null);
 
   useEffect(() => {
     if (session?.access_token) {
@@ -47,7 +62,9 @@ export default function QuestsPage() {
       });
       if (response.ok) {
         const data: QuestParticipation[] = await response.json();
-        setJoinedQuests(new Set(data.map(p => p.quest_id)));
+        const map = new Map<string, QuestParticipation>();
+        data.forEach(p => map.set(p.quest_id, p));
+        setJoinedQuests(map);
       }
     } catch (error) {
       console.error('Failed to fetch quest participations:', error);
@@ -67,11 +84,6 @@ export default function QuestsPage() {
       });
       return;
     }
-
-    if (quest.verificationType === 'healthKit' && (!profile?.health_data_source || profile.health_data_source === 'none')) {
-      setShowHealthPrompt(true);
-      return;
-    }
     
     setLoadingQuest(quest.id);
     
@@ -89,7 +101,14 @@ export default function QuestsPage() {
         throw new Error(data.error || 'Failed to join quest');
       }
 
-      setJoinedQuests(prev => new Set(prev).add(quest.id));
+      const newParticipation: QuestParticipation = {
+        quest_id: quest.id,
+        progress: 0,
+        completed: false,
+        joined_at: new Date().toISOString(),
+      };
+      
+      setJoinedQuests(prev => new Map(prev).set(quest.id, newParticipation));
       
       toast({
         title: "Quest Joined!",
@@ -106,7 +125,154 @@ export default function QuestsPage() {
     }
   };
 
-  const isJoined = (questId: string) => joinedQuests.has(questId);
+  const handleAction = (quest: Quest) => {
+    const participation = joinedQuests.get(quest.id);
+    if (!participation) {
+      handleJoin(quest);
+      return;
+    }
+
+    // Route to appropriate dialog based on verification type
+    switch (quest.verification_type) {
+      case 'gps_session':
+        setGpsQuest(quest);
+        break;
+      case 'proof_video':
+      case 'proof_photo':
+      case 'screenshot_health':
+        setProofQuest(quest);
+        break;
+      case 'quiz':
+        setQuizQuest(quest);
+        break;
+    }
+  };
+
+  const getActionButton = (quest: Quest) => {
+    const participation = joinedQuests.get(quest.id);
+    const isLoading = loadingQuest === quest.id;
+    const isJoined = !!participation;
+    const isCompleted = participation?.completed;
+
+    if (isCompleted) {
+      return (
+        <Button variant="outline" disabled className="w-full min-h-[44px]">
+          <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+          Completed
+        </Button>
+      );
+    }
+
+    if (!isJoined) {
+      return (
+        <Button 
+          className="w-full min-h-[44px]" 
+          onClick={() => handleJoin(quest)}
+          disabled={isLoading}
+          data-testid={`button-join-quest-${quest.id}`}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Joining...
+            </>
+          ) : (
+            <>
+              Join Quest <ArrowRight className="ml-2 w-4 h-4" />
+            </>
+          )}
+        </Button>
+      );
+    }
+
+    // User has joined, show action button based on verification type
+    switch (quest.verification_type) {
+      case 'gps_session':
+        return (
+          <Button 
+            className="w-full min-h-[44px]" 
+            onClick={() => handleAction(quest)}
+            data-testid={`button-start-session-${quest.id}`}
+          >
+            <MapPin className="w-4 h-4 mr-2" />
+            Start Session
+          </Button>
+        );
+      case 'proof_video':
+        return (
+          <Button 
+            className="w-full min-h-[44px]" 
+            onClick={() => handleAction(quest)}
+            data-testid={`button-submit-video-${quest.id}`}
+          >
+            <Video className="w-4 h-4 mr-2" />
+            Submit Video
+          </Button>
+        );
+      case 'proof_photo':
+      case 'screenshot_health':
+        return (
+          <Button 
+            className="w-full min-h-[44px]" 
+            onClick={() => handleAction(quest)}
+            data-testid={`button-submit-photo-${quest.id}`}
+          >
+            <Image className="w-4 h-4 mr-2" />
+            Submit Screenshot
+          </Button>
+        );
+      case 'quiz':
+        return (
+          <Button 
+            className="w-full min-h-[44px]" 
+            onClick={() => handleAction(quest)}
+            data-testid={`button-start-quiz-${quest.id}`}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Take Quiz
+          </Button>
+        );
+    }
+  };
+
+  const getVerificationBadge = (quest: Quest) => {
+    switch (quest.verification_type) {
+      case 'gps_session':
+        return (
+          <Badge variant="outline" className="text-[10px] gap-1 bg-green-500/10 text-green-600 border-green-500/30">
+            <MapPin className="w-3 h-3" />
+            GPS Session
+          </Badge>
+        );
+      case 'proof_video':
+        return (
+          <Badge variant="outline" className="text-[10px] gap-1 bg-blue-500/10 text-blue-500 border-blue-500/30">
+            <Video className="w-3 h-3" />
+            Video Proof
+          </Badge>
+        );
+      case 'proof_photo':
+      case 'screenshot_health':
+        return (
+          <Badge variant="outline" className="text-[10px] gap-1 bg-purple-500/10 text-purple-500 border-purple-500/30">
+            <Image className="w-3 h-3" />
+            Screenshot
+          </Badge>
+        );
+      case 'quiz':
+        return (
+          <Badge variant="outline" className="text-[10px] gap-1 bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+            <Sparkles className="w-3 h-3" />
+            Quiz
+          </Badge>
+        );
+    }
+  };
+
+  // Group quests by frequency
+  const dailyQuests = QUESTS.filter(q => q.frequency === 'daily' && q.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const weeklyQuests = QUESTS.filter(q => q.frequency === 'weekly' && q.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const seasonalQuests = QUESTS.filter(q => q.frequency === 'seasonal' && q.is_active).sort((a, b) => a.sort_order - b.sort_order);
 
   if (loading) {
     return (
@@ -116,181 +282,153 @@ export default function QuestsPage() {
     );
   }
 
+  const renderQuestCard = (quest: Quest) => {
+    const participation = joinedQuests.get(quest.id);
+    const isJoined = !!participation;
+    const isCompleted = participation?.completed;
+
+    return (
+      <Card 
+        key={quest.id} 
+        className={`overflow-hidden flex flex-col h-full group transition-all border-border/50 ${
+          isCompleted ? 'border-green-500/30 bg-green-500/5' :
+          isJoined ? 'border-primary/30 bg-primary/5' : 'hover:shadow-lg hover:shadow-primary/5'
+        }`}
+        data-testid={`card-quest-${quest.id}`}
+      >
+        <div className="relative h-40 w-full overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+          {quest.image && (
+            <img 
+              src={quest.image} 
+              alt={quest.title} 
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          )}
+          <div className="absolute top-3 right-3 z-20 flex gap-2">
+            <Badge className="bg-primary text-primary-foreground font-bold border-none shadow-lg">
+              +{quest.points} pts
+            </Badge>
+          </div>
+          <div className="absolute bottom-3 left-3 z-20">
+            <div className="flex gap-1 mb-1">
+              <Badge variant="secondary" className="bg-black/50 backdrop-blur-md border-white/10 text-white text-[10px] gap-1">
+                {CATEGORY_ICONS[quest.category]}
+                {quest.category}
+              </Badge>
+              <Badge variant="secondary" className="bg-black/50 backdrop-blur-md border-white/10 text-white text-[10px] gap-1">
+                <Calendar className="w-3 h-3" />
+                {FREQUENCY_LABELS[quest.frequency]}
+              </Badge>
+            </div>
+            <h3 className="text-lg font-bold text-white shadow-black drop-shadow-md">{quest.title}</h3>
+          </div>
+          {isJoined && (
+            <div className="absolute top-3 left-3 z-20">
+              <Badge className={isCompleted ? "bg-green-500 text-white border-none" : "bg-blue-500 text-white border-none"}>
+                {isCompleted ? (
+                  <><CheckCircle className="w-3 h-3 mr-1" /> Done</>
+                ) : (
+                  <><CheckCircle className="w-3 h-3 mr-1" /> Joined</>
+                )}
+              </Badge>
+            </div>
+          )}
+        </div>
+        
+        <CardContent className="flex-1 pt-4 space-y-3">
+          <p className="text-sm text-muted-foreground line-clamp-2">{quest.description}</p>
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            {getVerificationBadge(quest)}
+            {quest.anti_cheat_requires_daily_code && (
+              <Badge variant="outline" className="text-[10px] gap-1 bg-orange-500/10 text-orange-600 border-orange-500/30">
+                <AlertCircle className="w-3 h-3" />
+                Code Required
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+
+        <CardFooter className="pt-0 pb-4">
+          {getActionButton(quest)}
+        </CardFooter>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-8 pb-20 md:pb-0">
       <div>
-        <h1 className="text-3xl font-bold font-display tracking-tight">Quests</h1>
-        <p className="text-muted-foreground">Join challenges to boost your impact and earn rewards.</p>
+        <h1 className="text-3xl font-bold font-display tracking-tight">Pilot Quest Pack</h1>
+        <p className="text-muted-foreground">Complete quests to earn points and make a real impact.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {QUESTS.map((quest) => {
-          const joined = isJoined(quest.id);
-          const isLoading = loadingQuest === quest.id;
-          const requiresVerified = quest.requiresVerifiedActivity;
-          
-          return (
-            <Card 
-              key={quest.id} 
-              className={`overflow-hidden flex flex-col h-full group transition-all border-border/50 ${
-                joined ? 'border-primary/30 bg-primary/5' : 'hover:shadow-lg hover:shadow-primary/5'
-              }`}
-              data-testid={`card-quest-${quest.id}`}
-            >
-              <div className="relative h-48 w-full overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
-                {quest.image && (
-                  <img 
-                    src={quest.image} 
-                    alt={quest.title} 
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                )}
-                <div className="absolute top-4 right-4 z-20 flex gap-2">
-                  <Badge className="bg-primary text-primary-foreground font-bold border-none shadow-lg">
-                    +{quest.creditsReward} credits
-                  </Badge>
-                </div>
-                <div className="absolute bottom-4 left-4 z-20">
-                  <Badge variant="secondary" className="mb-2 bg-black/50 backdrop-blur-md border-white/10 text-white">
-                    {quest.category}
-                  </Badge>
-                  <h3 className="text-xl font-bold text-white shadow-black drop-shadow-md">{quest.title}</h3>
-                </div>
-                {joined && (
-                  <div className="absolute top-4 left-4 z-20">
-                    <Badge className="bg-green-500 text-white border-none">
-                      <CheckCircle className="w-3 h-3 mr-1" /> Joined
-                    </Badge>
-                  </div>
-                )}
-              </div>
-              
-              <CardContent className="flex-1 pt-6 space-y-4">
-                <p className="text-sm text-muted-foreground">{quest.description}</p>
-                
-                <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span>{quest.duration}</span>
-                  {quest.verificationType === 'healthKit' && (
-                    <Badge variant="outline" className="ml-auto text-[10px] gap-1 bg-pink-500/10 text-pink-500 border-pink-500/30">
-                      <Heart className="w-3 h-3" />
-                      Health Data
-                    </Badge>
-                  )}
-                  {quest.verificationType === 'video' && (
-                    <Badge variant="outline" className="ml-auto text-[10px] gap-1 bg-blue-500/10 text-blue-500 border-blue-500/30">
-                      <Video className="w-3 h-3" />
-                      Video Proof
-                    </Badge>
-                  )}
-                  {requiresVerified && quest.verificationType !== 'healthKit' && quest.verificationType !== 'video' && (
-                    <Badge variant="outline" className="ml-auto text-[10px] gap-1">
-                      <Shield className="w-3 h-3" />
-                      Verified only
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
+      <TodaysCodeDisplay />
 
-              <CardFooter className="pt-0 pb-6 flex gap-2">
-                {joined && quest.verificationType === 'video' ? (
-                  <Button 
-                    className="w-full min-h-[44px]" 
-                    onClick={() => {
-                      setVideoQuestId(quest.id);
-                      setVideoQuestTitle(quest.title);
-                    }}
-                    data-testid={`button-submit-video-${quest.id}`}
-                  >
-                    <Video className="w-4 h-4 mr-2" />
-                    Submit Video
-                  </Button>
-                ) : (
-                  <Button 
-                    className="w-full min-h-[44px]" 
-                    onClick={() => handleJoin(quest)}
-                    disabled={joined || isLoading}
-                    variant={joined ? "outline" : "default"}
-                    data-testid={`button-join-quest-${quest.id}`}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Joining...
-                      </>
-                    ) : joined ? (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Joined
-                      </>
-                    ) : (
-                      <>
-                        Join Quest <ArrowRight className="ml-2 w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Dialog open={showHealthPrompt} onOpenChange={setShowHealthPrompt}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-500" />
-              Health Data Source Required
-            </DialogTitle>
-            <DialogDescription>
-              This quest requires health data verification. Please connect a health data source in your profile settings before joining.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <p className="text-sm text-muted-foreground">
-              Supported health apps:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="gap-1">
-                <Heart className="w-3 h-3" /> Apple Health
-              </Badge>
-              <Badge variant="outline" className="gap-1">
-                <Heart className="w-3 h-3" /> Google Fit
-              </Badge>
-              <Badge variant="outline" className="gap-1">
-                <Heart className="w-3 h-3" /> Samsung Health
-              </Badge>
-            </div>
+      {dailyQuests.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary" />
+            Daily Quests
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {dailyQuests.map(renderQuestCard)}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowHealthPrompt(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => { setShowHealthPrompt(false); setLocation('/profile'); }}>
-              Go to Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
-      <VideoSubmissionDialog
-        open={!!videoQuestId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setVideoQuestId(null);
-            setVideoQuestTitle("");
-          }
-        }}
-        questId={videoQuestId || ""}
-        questTitle={videoQuestTitle}
+      {weeklyQuests.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" />
+            Weekly Quests
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {weeklyQuests.map(renderQuestCard)}
+          </div>
+        </div>
+      )}
+
+      {seasonalQuests.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Seasonal Quests
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {seasonalQuests.map(renderQuestCard)}
+          </div>
+        </div>
+      )}
+
+      <ProofSubmissionDialog
+        open={!!proofQuest}
+        onOpenChange={(open) => !open && setProofQuest(null)}
+        quest={proofQuest}
         accessToken={session?.access_token}
         onSuccess={() => {
-          toast({
-            title: "Video submitted!",
-            description: "Your submission is pending review.",
-          });
+          fetchMyQuests();
+        }}
+      />
+
+      <GpsSessionDialog
+        open={!!gpsQuest}
+        onOpenChange={(open) => !open && setGpsQuest(null)}
+        quest={gpsQuest}
+        accessToken={session?.access_token}
+        onSuccess={() => {
+          fetchMyQuests();
+        }}
+      />
+
+      <EcoQuizDialog
+        open={!!quizQuest}
+        onOpenChange={(open) => !open && setQuizQuest(null)}
+        quest={quizQuest}
+        accessToken={session?.access_token}
+        onSuccess={() => {
+          fetchMyQuests();
         }}
       />
     </div>

@@ -1,0 +1,261 @@
+You are a senior full-stack engineer + QA for Play for Planet Earth (PfPE). Goal: replace the current quest set with a tight “Pilot Quest Pack” designed for verifiable actions and minimal cheating, WITHOUT requiring any external partner integrations.
+
+CONTEXT
+- The app currently lets users select a health source preference (Apple Health / Google Fit / Samsung Health), but there is NO actual data sync yet.
+- This pilot must work on web/PWA today.
+- We want verifiable quests using: GPS sessions + proof video uploads + screenshots + quizzes.
+- Add anti-cheat: a rotating “Today’s Code” that must appear in proof videos/photos.
+
+TASKS (do all)
+1) FIND WHERE QUESTS LIVE
+   - Search the repo for: "quests", "missions", "challenge", "seed", "Supabase", "Quest", "quest_id".
+   - Identify whether quests are stored in:
+     a) a Supabase table,
+     b) a local JSON/TS constant,
+     c) a seed script.
+   - Document the location(s) you found in a short comment.
+
+2) REPLACE QUESTS WITH PILOT QUEST PACK
+   - Delete/disable existing quests and replace with EXACTLY the 12 quests in the JSON below.
+   - Ensure each quest has fields:
+     id (string), title, description, category, frequency (daily/weekly/seasonal),
+     points (int),
+     verification_type (gps_session / proof_video / proof_photo / screenshot_health / quiz),
+     proof_required (boolean),
+     proof_instructions (string),
+     anti_cheat_requires_daily_code (boolean),
+     share_prompt (string),
+     is_active (boolean),
+     sort_order (int)
+
+3) ADD “TODAY’S CODE” ANTI-CHEAT MECHANIC
+   - Implement a daily rotating code visible in-app:
+     Example format: WORD-NN (e.g., MOSS-17) or two emojis.
+   - Store it server-side or deterministically generate it by date (UTC) so it’s consistent for all users each day.
+   - If a quest has anti_cheat_requires_daily_code=true:
+     - show Today’s Code prominently on the proof submission screen
+     - include it in proof_instructions text
+
+4) PROOF SUBMISSION FLOW
+   - For verification_type = proof_video/proof_photo/screenshot_health:
+     - create/confirm a “Submit Proof” UI and backend storage
+     - store uploads in your existing storage (e.g., Supabase Storage) with:
+       quest_id, user_id, created_at, file_url, status (pending/approved/rejected), reviewer_notes
+   - If you have no admin review UI yet:
+     - implement “auto-approve” temporarily ONLY for quiz and gps_session
+     - keep uploads as “pending” and show users “Pending review”
+
+5) GPS SESSION FLOW
+   - For verification_type = gps_session:
+     - implement a simple Start/Stop session with timer + distance estimate.
+     - Store: quest_id, user_id, start_time, end_time, duration_sec, distance_m (if available), status=approved.
+     - Add basic fraud guardrails:
+       - minimum duration threshold (e.g. 10 minutes)
+       - if distance is 0 and duration is long, still allow for “Green Time” quest but not for cycling/walking quests.
+
+6) HEALTH SOURCE SETTING (IMPORTANT)
+   - Keep the health source selector, but change copy everywhere to make it explicit:
+     “Preference only (sync coming in native mobile). For now, upload a screenshot for step-based quests.”
+   - Remove/avoid any UI that implies live sync is happening.
+
+7) OPTIONAL: FEATURE FLAG FOR FUTURE INTEGRATIONS
+   - Add a feature flag ENABLE_HEALTH_SYNC (default false).
+   - If false, hide any “Connect” buttons.
+   - Structure code so native app integration can plug in later.
+
+8) QA + ACCEPTANCE CRITERIA
+   - App must load with no errors.
+   - Quests screen shows exactly 12 active quests.
+   - Completing quiz quests works end-to-end.
+   - GPS session quests can be completed end-to-end.
+   - Proof upload quests allow upload and create a pending record.
+   - Today’s Code is visible and changes day-to-day.
+   - No external partner integration required.
+
+HERE IS THE PILOT QUEST PACK JSON (USE EXACTLY)
+[
+  {
+    "id":"pilot_steps_daily",
+    "title":"Planet Steps Mini",
+    "description":"Hit 4,000 steps today.",
+    "category":"movement",
+    "frequency":"daily",
+    "points":40,
+    "verification_type":"screenshot_health",
+    "proof_required":true,
+    "proof_instructions":"Upload a screenshot from your health app showing today’s step count. Include Today’s Code somewhere in the screenshot (e.g., open PfPE Today’s Code screen beside it).",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"I just hit my Planet Steps Mini 🌱 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":1
+  },
+  {
+    "id":"pilot_walk_instead",
+    "title":"Walk Instead",
+    "description":"Replace one short trip with a 12-minute walk.",
+    "category":"movement",
+    "frequency":"daily",
+    "points":60,
+    "verification_type":"gps_session",
+    "proof_required":false,
+    "proof_instructions":"Start a session in-app and walk for at least 12 minutes.",
+    "anti_cheat_requires_daily_code":false,
+    "share_prompt":"Walk Instead completed 🚶🌿 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":2
+  },
+  {
+    "id":"pilot_refill_ritual",
+    "title":"Refill Ritual",
+    "description":"Use a reusable bottle today.",
+    "category":"waste",
+    "frequency":"daily",
+    "points":30,
+    "verification_type":"proof_video",
+    "proof_required":true,
+    "proof_instructions":"Upload a 10–15s video showing your bottle + say Today’s Code out loud.",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"Refill Ritual done 💧♻️ #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":3
+  },
+  {
+    "id":"pilot_no_bag",
+    "title":"No Bag Mission",
+    "description":"Refuse a plastic bag on a purchase.",
+    "category":"waste",
+    "frequency":"daily",
+    "points":30,
+    "verification_type":"proof_video",
+    "proof_required":true,
+    "proof_instructions":"Upload a 10–15s video with the item in your hand + say Today’s Code. No receipts needed.",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"No Bag Mission complete 🛍️🚫 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":4
+  },
+  {
+    "id":"pilot_quiz_spark",
+    "title":"Eco Knowledge Spark",
+    "description":"Complete today’s 5-question eco quiz.",
+    "category":"learning",
+    "frequency":"daily",
+    "points":20,
+    "verification_type":"quiz",
+    "proof_required":false,
+    "proof_instructions":"Answer 5 questions in-app.",
+    "anti_cheat_requires_daily_code":false,
+    "share_prompt":"Eco Knowledge Spark ⚡🌍 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":5
+  },
+  {
+    "id":"pilot_green_time",
+    "title":"Green Time",
+    "description":"Spend 15 minutes outside.",
+    "category":"wellbeing",
+    "frequency":"daily",
+    "points":25,
+    "verification_type":"gps_session",
+    "proof_required":false,
+    "proof_instructions":"Start a session in-app and stay outside for at least 15 minutes.",
+    "anti_cheat_requires_daily_code":false,
+    "share_prompt":"Green Time outdoors 🌳✨ #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":6
+  },
+  {
+    "id":"pilot_steps_weekly",
+    "title":"Big Steps Week",
+    "description":"Reach 30,000 steps across 7 days.",
+    "category":"movement",
+    "frequency":"weekly",
+    "points":120,
+    "verification_type":"screenshot_health",
+    "proof_required":true,
+    "proof_instructions":"Upload a weekly summary screenshot from your health app + include Today’s Code visible somewhere.",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"Big Steps Week complete 👟🌿 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":7
+  },
+  {
+    "id":"pilot_cycle_session",
+    "title":"Cycle Session",
+    "description":"Cycle for 20 minutes.",
+    "category":"movement",
+    "frequency":"weekly",
+    "points":140,
+    "verification_type":"gps_session",
+    "proof_required":false,
+    "proof_instructions":"Start a session in-app, cycle for 20 minutes. Minimum duration enforced.",
+    "anti_cheat_requires_daily_code":false,
+    "share_prompt":"Cycle Session 🚴🌍 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":8
+  },
+  {
+    "id":"pilot_litter_sprint",
+    "title":"Litter Sprint",
+    "description":"Collect 10 pieces of litter safely.",
+    "category":"community",
+    "frequency":"weekly",
+    "points":150,
+    "verification_type":"proof_video",
+    "proof_required":true,
+    "proof_instructions":"Upload a 15–20s video: show Today’s Code, show the litter bag, quick pan of the area.",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"Litter Sprint cleaned my corner 🧤🗑️ #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":9
+  },
+  {
+    "id":"pilot_plant_meal",
+    "title":"Plant-Based Meal",
+    "description":"Eat one plant-based meal.",
+    "category":"food",
+    "frequency":"weekly",
+    "points":80,
+    "verification_type":"proof_video",
+    "proof_required":true,
+    "proof_instructions":"Upload a 10–15s video of the meal + say Today’s Code.",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"Plant-Based Meal 🥗🌱 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":10
+  },
+  {
+    "id":"pilot_share_quest",
+    "title":"Share Your Quest",
+    "description":"Share one quest moment from PfPE.",
+    "category":"community",
+    "frequency":"seasonal",
+    "points":100,
+    "verification_type":"proof_video",
+    "proof_required":true,
+    "proof_instructions":"Upload the same video you shared (or a screen recording) + include Today’s Code in the video intro.",
+    "anti_cheat_requires_daily_code":true,
+    "share_prompt":"I’m testing Play for Planet Earth. Join me 🌍🎮",
+    "is_active":true,
+    "sort_order":11
+  },
+  {
+    "id":"pilot_buddy_challenge",
+    "title":"Buddy Challenge",
+    "description":"Invite 1 friend who completes 1 quest.",
+    "category":"community",
+    "frequency":"seasonal",
+    "points":200,
+    "verification_type":"quiz",
+    "proof_required":false,
+    "proof_instructions":"Use in-app invite. Friend must complete any quest to validate.",
+    "anti_cheat_requires_daily_code":false,
+    "share_prompt":"Buddy Challenge unlocked 🤝🌿 #PlayForPlanetEarth",
+    "is_active":true,
+    "sort_order":12
+  }
+]
+
+DELIVERABLES
+- Commit the changes.
+- Provide a brief checklist of what was changed, where quests are stored, and how to test each verification type.

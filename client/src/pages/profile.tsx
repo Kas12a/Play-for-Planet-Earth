@@ -331,10 +331,10 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-pink-500" />
-            Health Data Source
+            Health App Preference
           </CardTitle>
           <CardDescription>
-            Select your health app to verify activity-based quests
+            Preference only (sync coming in native mobile app)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -344,11 +344,11 @@ export default function ProfilePage() {
                 <Smartphone className="w-5 h-5 text-pink-500" />
               </div>
               <div>
-                <div className="font-medium">Health App Connection</div>
+                <div className="font-medium">Preferred Health App</div>
                 <div className="text-sm text-muted-foreground">
                   {profile?.health_data_source && profile.health_data_source !== 'none' 
-                    ? `Connected to ${profile.health_data_source === 'apple' ? 'Apple Health' : profile.health_data_source === 'google' ? 'Google Fit' : 'Samsung Health'}`
-                    : 'No health app connected'}
+                    ? `${profile.health_data_source === 'apple' ? 'Apple Health' : profile.health_data_source === 'google' ? 'Google Fit' : 'Samsung Health'}`
+                    : 'No preference set'}
                 </div>
               </div>
             </div>
@@ -371,7 +371,7 @@ export default function ProfilePage() {
             </Select>
           </div>
           <p className="text-xs text-muted-foreground mt-4">
-            Note: Health data integration is coming soon. Select your preferred source to be ready for activity-based quests.
+            This is a preference only. Direct health app sync is coming in the native mobile app. For now, upload a screenshot from your health app for step-based quests.
           </p>
         </CardContent>
       </Card>

@@ -81,26 +81,27 @@ export interface Redemption {
   createdAt: string;
 }
 
-export type VerificationType = 'healthKit' | 'video' | 'manual' | 'strava';
-export type HealthKitSource = 'apple' | 'google' | 'samsung';
+export type VerificationType = 'gps_session' | 'proof_video' | 'proof_photo' | 'screenshot_health' | 'quiz';
+export type QuestFrequency = 'daily' | 'weekly' | 'seasonal';
+export type QuestCategory = 'movement' | 'waste' | 'learning' | 'wellbeing' | 'food' | 'community';
 
 export interface Quest {
   id: string;
   title: string;
   description: string;
-  creditsReward: number;
-  xpReward: number;
-  category: 'Global' | 'Cohort';
-  duration: string;
-  durationDays: number;
-  participants?: number;
+  category: QuestCategory;
+  frequency: QuestFrequency;
+  points: number;
+  verification_type: VerificationType;
+  proof_required: boolean;
+  proof_instructions: string;
+  anti_cheat_requires_daily_code: boolean;
+  share_prompt: string;
+  is_active: boolean;
+  sort_order: number;
   image?: string;
-  evidenceRequired?: boolean;
-  requiresVerifiedActivity?: boolean;
-  verificationType: VerificationType;
-  healthKit?: HealthKitSource[];
-  progress?: number;
   joined?: boolean;
+  progress?: number;
 }
 
 export interface Badge {
@@ -162,88 +163,199 @@ export const ACTION_TYPES: ActionType[] = [
   { id: '20', title: 'Zero Waste Shopping', category: 'Waste', baseRewardCredits: 25, impactCO2: 0.4, impactWaste: 0.3, description: 'Shopped with reusable bags/containers', icon: 'shopping-bag' },
 ];
 
-// Quests with verification types (healthKit, video, manual)
+// Pilot Quest Pack - 12 verifiable quests
 export const QUESTS: Quest[] = [
   {
-    id: 'step-streak',
-    title: '10-Day Step Streak',
-    description: 'Achieve at least 7,000 steps per day for 10 consecutive days.',
-    category: 'Global',
-    creditsReward: 200,
-    xpReward: 400,
-    duration: '10 Days',
-    durationDays: 10,
+    id: 'pilot_steps_daily',
+    title: 'Planet Steps Mini',
+    description: 'Hit 4,000 steps today.',
+    category: 'movement',
+    frequency: 'daily',
+    points: 40,
+    verification_type: 'screenshot_health',
+    proof_required: true,
+    proof_instructions: "Upload a screenshot from your health app showing today's step count. Include Today's Code somewhere in the screenshot (e.g., open PfPE Today's Code screen beside it).",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'I just hit my Planet Steps Mini 🌱 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 1,
     image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&q=80&w=800',
-    verificationType: 'healthKit',
-    healthKit: ['apple', 'google', 'samsung'],
-    requiresVerifiedActivity: true,
   },
   {
-    id: 'green-commute',
-    title: 'Green Commute Challenge',
-    description: 'Walk or cycle a total of 20 km in 7 days.',
-    category: 'Global',
-    creditsReward: 250,
-    xpReward: 500,
-    duration: '7 Days',
-    durationDays: 7,
-    image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800',
-    verificationType: 'healthKit',
-    healthKit: ['apple', 'google', 'samsung'],
-    requiresVerifiedActivity: true,
+    id: 'pilot_walk_instead',
+    title: 'Walk Instead',
+    description: 'Replace one short trip with a 12-minute walk.',
+    category: 'movement',
+    frequency: 'daily',
+    points: 60,
+    verification_type: 'gps_session',
+    proof_required: false,
+    proof_instructions: 'Start a session in-app and walk for at least 12 minutes.',
+    anti_cheat_requires_daily_code: false,
+    share_prompt: 'Walk Instead completed 🚶🌿 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 2,
+    image: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&q=80&w=800',
   },
   {
-    id: 'active-minutes',
-    title: 'Active Minutes Challenge',
-    description: 'Accumulate 150 minutes of moderate-to-vigorous activity in one week.',
-    category: 'Global',
-    creditsReward: 200,
-    xpReward: 400,
-    duration: '7 Days',
-    durationDays: 7,
+    id: 'pilot_refill_ritual',
+    title: 'Refill Ritual',
+    description: 'Use a reusable bottle today.',
+    category: 'waste',
+    frequency: 'daily',
+    points: 30,
+    verification_type: 'proof_video',
+    proof_required: true,
+    proof_instructions: "Upload a 10–15s video showing your bottle + say Today's Code out loud.",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'Refill Ritual done 💧♻️ #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 3,
+    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&q=80&w=800',
+  },
+  {
+    id: 'pilot_no_bag',
+    title: 'No Bag Mission',
+    description: 'Refuse a plastic bag on a purchase.',
+    category: 'waste',
+    frequency: 'daily',
+    points: 30,
+    verification_type: 'proof_video',
+    proof_required: true,
+    proof_instructions: "Upload a 10–15s video with the item in your hand + say Today's Code. No receipts needed.",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'No Bag Mission complete 🛍️🚫 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 4,
+    image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&q=80&w=800',
+  },
+  {
+    id: 'pilot_quiz_spark',
+    title: 'Eco Knowledge Spark',
+    description: "Complete today's 5-question eco quiz.",
+    category: 'learning',
+    frequency: 'daily',
+    points: 20,
+    verification_type: 'quiz',
+    proof_required: false,
+    proof_instructions: 'Answer 5 questions in-app.',
+    anti_cheat_requires_daily_code: false,
+    share_prompt: 'Eco Knowledge Spark ⚡🌍 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 5,
+    image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=800',
+  },
+  {
+    id: 'pilot_green_time',
+    title: 'Green Time',
+    description: 'Spend 15 minutes outside.',
+    category: 'wellbeing',
+    frequency: 'daily',
+    points: 25,
+    verification_type: 'gps_session',
+    proof_required: false,
+    proof_instructions: 'Start a session in-app and stay outside for at least 15 minutes.',
+    anti_cheat_requires_daily_code: false,
+    share_prompt: 'Green Time outdoors 🌳✨ #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 6,
+    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80&w=800',
+  },
+  {
+    id: 'pilot_steps_weekly',
+    title: 'Big Steps Week',
+    description: 'Reach 30,000 steps across 7 days.',
+    category: 'movement',
+    frequency: 'weekly',
+    points: 120,
+    verification_type: 'screenshot_health',
+    proof_required: true,
+    proof_instructions: "Upload a weekly summary screenshot from your health app + include Today's Code visible somewhere.",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'Big Steps Week complete 👟🌿 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 7,
     image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&q=80&w=800',
-    verificationType: 'healthKit',
-    healthKit: ['apple', 'google', 'samsung'],
-    requiresVerifiedActivity: true,
   },
   {
-    id: 'park-cleanup-video',
-    title: 'Park Clean-Up Video',
-    description: "Record a short video (≥30 seconds) of yourself picking up litter in a park. Include today's code word in the video for verification.",
-    category: 'Cohort',
-    creditsReward: 150,
-    xpReward: 300,
-    duration: '1 Day',
-    durationDays: 1,
+    id: 'pilot_cycle_session',
+    title: 'Cycle Session',
+    description: 'Cycle for 20 minutes.',
+    category: 'movement',
+    frequency: 'weekly',
+    points: 140,
+    verification_type: 'gps_session',
+    proof_required: false,
+    proof_instructions: 'Start a session in-app, cycle for 20 minutes. Minimum duration enforced.',
+    anti_cheat_requires_daily_code: false,
+    share_prompt: 'Cycle Session 🚴🌍 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 8,
+    image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800',
+  },
+  {
+    id: 'pilot_litter_sprint',
+    title: 'Litter Sprint',
+    description: 'Collect 10 pieces of litter safely.',
+    category: 'community',
+    frequency: 'weekly',
+    points: 150,
+    verification_type: 'proof_video',
+    proof_required: true,
+    proof_instructions: "Upload a 15–20s video: show Today's Code, show the litter bag, quick pan of the area.",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'Litter Sprint cleaned my corner 🧤🗑️ #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 9,
     image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800',
-    verificationType: 'video',
-    evidenceRequired: true,
   },
   {
-    id: 'reuse-cup-video',
-    title: 'Bring Your Own Cup Video',
-    description: 'Record a video of yourself ordering a drink using a reusable cup; say the daily code word on camera.',
-    category: 'Global',
-    creditsReward: 100,
-    xpReward: 200,
-    duration: '1 Day',
-    durationDays: 1,
-    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=800',
-    verificationType: 'video',
-    evidenceRequired: true,
+    id: 'pilot_plant_meal',
+    title: 'Plant-Based Meal',
+    description: 'Eat one plant-based meal.',
+    category: 'food',
+    frequency: 'weekly',
+    points: 80,
+    verification_type: 'proof_video',
+    proof_required: true,
+    proof_instructions: "Upload a 10–15s video of the meal + say Today's Code.",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'Plant-Based Meal 🥗🌱 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 10,
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800',
   },
   {
-    id: 'upcycle-demo-video',
-    title: 'Upcycle/Repair Demo',
-    description: 'Record a video showing how you repaired or upcycled an item and include the daily code word.',
-    category: 'Global',
-    creditsReward: 150,
-    xpReward: 300,
-    duration: '1 Day',
-    durationDays: 1,
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800',
-    verificationType: 'video',
-    evidenceRequired: true,
+    id: 'pilot_share_quest',
+    title: 'Share Your Quest',
+    description: 'Share one quest moment from PfPE.',
+    category: 'community',
+    frequency: 'seasonal',
+    points: 100,
+    verification_type: 'proof_video',
+    proof_required: true,
+    proof_instructions: "Upload the same video you shared (or a screen recording) + include Today's Code in the video intro.",
+    anti_cheat_requires_daily_code: true,
+    share_prompt: 'I\'m testing Play for Planet Earth. Join me 🌍🎮',
+    is_active: true,
+    sort_order: 11,
+    image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800',
+  },
+  {
+    id: 'pilot_buddy_challenge',
+    title: 'Buddy Challenge',
+    description: 'Invite 1 friend who completes 1 quest.',
+    category: 'community',
+    frequency: 'seasonal',
+    points: 200,
+    verification_type: 'quiz',
+    proof_required: false,
+    proof_instructions: 'Use in-app invite. Friend must complete any quest to validate.',
+    anti_cheat_requires_daily_code: false,
+    share_prompt: 'Buddy Challenge unlocked 🤝🌿 #PlayForPlanetEarth',
+    is_active: true,
+    sort_order: 12,
+    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=800',
   },
 ];
 
