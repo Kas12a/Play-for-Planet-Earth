@@ -46,6 +46,11 @@ integrations = ["javascript_object_storage:2.0.0"]
 [userenv]
 
 [userenv.shared]
+TREE_NATION_ENV = "test"
+TREE_NATION_API_BASE_URL_TEST = "https://test.tree-nation.com/api"
+TREE_NATION_API_BASE_URL_LIVE = "https://tree-nation.com/api"
+TREE_NATION_DEFAULT_QUANTITY = "1"
+TREE_NATION_SEND_EMAIL = "false"
 
 [userenv.development]
 STRAVA_REDIRECT_URI = "https://5f9078c6-9987-450c-ae4c-5dddd60d2b9f-00-jpp519ezjrkr.kirk.replit.dev/api/strava/callback"

@@ -1,0 +1,66 @@
+1. In our project’s quest definition file (e.g. quests.json or quests.tsx), replace the existing quests array with the following array of quest objects:
+
+[
+  {
+    "id": "step-streak",
+    "name": "10-Day Step Streak",
+    "description": "Achieve at least 7,000 steps per day for 10 consecutive days.",
+    "durationDays": 10,
+    "credits": 200,
+    "verificationType": "healthKit",
+    "healthKit": ["apple", "google", "samsung"]
+  },
+  {
+    "id": "green-commute",
+    "name": "Green Commute Challenge",
+    "description": "Walk or cycle a total of 20 km in 7 days.",
+    "durationDays": 7,
+    "credits": 250,
+    "verificationType": "healthKit",
+    "healthKit": ["apple", "google", "samsung"]
+  },
+  {
+    "id": "active-minutes",
+    "name": "Active Minutes Challenge",
+    "description": "Accumulate 150 minutes of moderate-to-vigorous activity in one week.",
+    "durationDays": 7,
+    "credits": 200,
+    "verificationType": "healthKit",
+    "healthKit": ["apple", "google", "samsung"]
+  },
+  {
+    "id": "park-cleanup-video",
+    "name": "Park Clean-Up Video",
+    "description": "Record a short video (≥30 seconds) of yourself picking up litter in a park. Include today’s code word in the video for verification.",
+    "durationDays": 1,
+    "credits": 150,
+    "verificationType": "video"
+  },
+  {
+    "id": "reuse-cup-video",
+    "name": "Bring Your Own Cup Video",
+    "description": "Record a video of yourself ordering a drink using a reusable cup; say the daily code word on camera.",
+    "durationDays": 1,
+    "credits": 100,
+    "verificationType": "video"
+  },
+  {
+    "id": "upcycle-demo-video",
+    "name": "Upcycle/Repair Demo",
+    "description": "Record a video showing how you repaired or upcycled an item and include the daily code word.",
+    "durationDays": 1,
+    "credits": 150,
+    "verificationType": "video"
+  }
+]
+
+2. Add a user setting (e.g. in profile settings) called “Health Data Source” with options: 'apple', 'google', 'samsung', or 'none'. Persist the user’s choice (e.g. in local storage or the user profile).
+
+3. Modify the quest verification logic so that for quests with `"verificationType": "healthKit"`, the app reads data from the user’s selected health data source: 
+   - If the user selected 'apple', use Apple HealthKit APIs to retrieve steps, distance and active minutes [oai_citation:3‡mindsea.com](https://mindsea.com/blog/apple-health-android-health-connect-integration-platforms-for-health-wellness-and-fitness/#:~:text=Apple%20Health%20is%20an%20app,Apple%20HealthKit%20does%2C%20through%20the).
+   - If the user selected 'google' or 'samsung', use Android Health Connect to access Google Fit or Samsung Health data (distance, steps, active minutes) [oai_citation:4‡mindsea.com](https://mindsea.com/blog/apple-health-android-health-connect-integration-platforms-for-health-wellness-and-fitness/#:~:text=Fit%20www,of%20Google%20Fit%20in%202025).
+   - If the user selected 'none', show a prompt encouraging them to enable a health data source before joining these quests.
+
+4. For quests with `"verificationType": "video"`, add an upload or recording field in the quest completion screen. Store the video and a corresponding verification status (e.g. 'pending', 'approved').
+
+5. Finally, ensure that old quests are removed or archived so they do not appear in the active quest list.
