@@ -140,7 +140,11 @@ export default function OnboardingPage() {
       return;
     }
     
-    setLocation('/');
+    // Small delay to ensure state update propagates, then navigate
+    setSaving(false);
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 100);
   };
 
   const handleLocationToggle = async (enabled: boolean) => {
