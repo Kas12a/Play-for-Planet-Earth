@@ -5,6 +5,7 @@ import { getSupabase } from './supabase';
 export type AgeRange = '12 - 15' | '16 - 20' | '21 - 28' | '29 - 35' | '36 or older';
 export type StartMode = 'individual' | 'group';
 export type OnboardingStep = 'welcome' | 'auth' | 'profile' | 'mode' | 'interests' | 'permissions' | 'complete';
+export type HealthDataSource = 'apple' | 'google' | 'samsung' | 'none';
 
 export const INTEREST_OPTIONS = [
   'Nature & Outdoors',
@@ -40,6 +41,7 @@ export interface Profile {
   email_verified: boolean;
   email_verified_at: string | null;
   email_verify_dismissed_at: string | null;
+  health_data_source: HealthDataSource | null;
   created_at: string;
 }
 
@@ -94,6 +96,7 @@ export function useProfile() {
             email_verified: false,
             email_verified_at: null,
             email_verify_dismissed_at: null,
+            health_data_source: null,
             created_at: new Date().toISOString(),
           });
         } else {

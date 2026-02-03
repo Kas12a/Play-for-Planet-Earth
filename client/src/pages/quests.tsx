@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { QUESTS, Quest } from "@/lib/store";
 import { useAuth } from "@/lib/authContext";
+import { useProfile, HealthDataSource } from "@/lib/useProfile";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ArrowRight, CheckCircle, Loader2, Shield } from "lucide-react";
+import { Clock, ArrowRight, CheckCircle, Loader2, Shield, Video, Heart, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useLocation } from "wouter";
+import { VideoSubmissionDialog } from "@/components/video-submission-dialog";
 
 interface QuestParticipation {
   quest_id: string;
@@ -17,9 +21,14 @@ interface QuestParticipation {
 export default function QuestsPage() {
   const { toast } = useToast();
   const { session } = useAuth();
+  const { profile } = useProfile();
+  const [, setLocation] = useLocation();
   const [joinedQuests, setJoinedQuests] = useState<Set<string>>(new Set());
   const [loadingQuest, setLoadingQuest] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showHealthPrompt, setShowHealthPrompt] = useState(false);
+  const [videoQuestId, setVideoQuestId] = useState<string | null>(null);
+  const [videoQuestTitle, setVideoQuestTitle] = useState("");
 
   useEffect(() => {
     if (session?.access_token) {
@@ -56,6 +65,11 @@ export default function QuestsPage() {
         description: "You need to be signed in to join quests.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (quest.verificationType === 'healthKit' && (!profile?.health_data_source || profile.health_data_source === 'none')) {
+      setShowHealthPrompt(true);
       return;
     }
     
@@ -155,10 +169,22 @@ export default function QuestsPage() {
               <CardContent className="flex-1 pt-6 space-y-4">
                 <p className="text-sm text-muted-foreground">{quest.description}</p>
                 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                   <Clock className="w-4 h-4 text-primary" />
                   <span>{quest.duration}</span>
-                  {requiresVerified && (
+                  {quest.verificationType === 'healthKit' && (
+                    <Badge variant="outline" className="ml-auto text-[10px] gap-1 bg-pink-500/10 text-pink-500 border-pink-500/30">
+                      <Heart className="w-3 h-3" />
+                      Health Data
+                    </Badge>
+                  )}
+                  {quest.verificationType === 'video' && (
+                    <Badge variant="outline" className="ml-auto text-[10px] gap-1 bg-blue-500/10 text-blue-500 border-blue-500/30">
+                      <Video className="w-3 h-3" />
+                      Video Proof
+                    </Badge>
+                  )}
+                  {requiresVerified && quest.verificationType !== 'healthKit' && quest.verificationType !== 'video' && (
                     <Badge variant="outline" className="ml-auto text-[10px] gap-1">
                       <Shield className="w-3 h-3" />
                       Verified only
@@ -167,35 +193,106 @@ export default function QuestsPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-0 pb-6">
-                <Button 
-                  className="w-full min-h-[44px]" 
-                  onClick={() => handleJoin(quest)}
-                  disabled={joined || isLoading}
-                  variant={joined ? "outline" : "default"}
-                  data-testid={`button-join-quest-${quest.id}`}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Joining...
-                    </>
-                  ) : joined ? (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Joined
-                    </>
-                  ) : (
-                    <>
-                      Join Quest <ArrowRight className="ml-2 w-4 h-4" />
-                    </>
-                  )}
-                </Button>
+              <CardFooter className="pt-0 pb-6 flex gap-2">
+                {joined && quest.verificationType === 'video' ? (
+                  <Button 
+                    className="w-full min-h-[44px]" 
+                    onClick={() => {
+                      setVideoQuestId(quest.id);
+                      setVideoQuestTitle(quest.title);
+                    }}
+                    data-testid={`button-submit-video-${quest.id}`}
+                  >
+                    <Video className="w-4 h-4 mr-2" />
+                    Submit Video
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full min-h-[44px]" 
+                    onClick={() => handleJoin(quest)}
+                    disabled={joined || isLoading}
+                    variant={joined ? "outline" : "default"}
+                    data-testid={`button-join-quest-${quest.id}`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Joining...
+                      </>
+                    ) : joined ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Joined
+                      </>
+                    ) : (
+                      <>
+                        Join Quest <ArrowRight className="ml-2 w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           );
         })}
       </div>
+
+      <Dialog open={showHealthPrompt} onOpenChange={setShowHealthPrompt}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-500" />
+              Health Data Source Required
+            </DialogTitle>
+            <DialogDescription>
+              This quest requires health data verification. Please connect a health data source in your profile settings before joining.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Supported health apps:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="gap-1">
+                <Heart className="w-3 h-3" /> Apple Health
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <Heart className="w-3 h-3" /> Google Fit
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <Heart className="w-3 h-3" /> Samsung Health
+              </Badge>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHealthPrompt(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => { setShowHealthPrompt(false); setLocation('/profile'); }}>
+              Go to Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <VideoSubmissionDialog
+        open={!!videoQuestId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setVideoQuestId(null);
+            setVideoQuestTitle("");
+          }
+        }}
+        questId={videoQuestId || ""}
+        questTitle={videoQuestTitle}
+        accessToken={session?.access_token}
+        onSuccess={() => {
+          toast({
+            title: "Video submitted!",
+            description: "Your submission is pending review.",
+          });
+        }}
+      />
     </div>
   );
 }

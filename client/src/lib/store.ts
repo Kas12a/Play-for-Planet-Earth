@@ -81,6 +81,9 @@ export interface Redemption {
   createdAt: string;
 }
 
+export type VerificationType = 'healthKit' | 'video' | 'manual' | 'strava';
+export type HealthKitSource = 'apple' | 'google' | 'samsung';
+
 export interface Quest {
   id: string;
   title: string;
@@ -89,10 +92,13 @@ export interface Quest {
   xpReward: number;
   category: 'Global' | 'Cohort';
   duration: string;
+  durationDays: number;
   participants?: number;
   image?: string;
   evidenceRequired?: boolean;
   requiresVerifiedActivity?: boolean;
+  verificationType: VerificationType;
+  healthKit?: HealthKitSource[];
   progress?: number;
   joined?: boolean;
 }
@@ -156,14 +162,89 @@ export const ACTION_TYPES: ActionType[] = [
   { id: '20', title: 'Zero Waste Shopping', category: 'Waste', baseRewardCredits: 25, impactCO2: 0.4, impactWaste: 0.3, description: 'Shopped with reusable bags/containers', icon: 'shopping-bag' },
 ];
 
-// 6 Quests (evidence requirement removed for pilot)
+// Quests with verification types (healthKit, video, manual)
 export const QUESTS: Quest[] = [
-  { id: '1', title: 'Plastic Free July', description: 'Avoid single-use plastics for a whole month. Log daily actions to track progress.', category: 'Global', creditsReward: 500, xpReward: 1000, duration: '30 Days', image: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: false },
-  { id: '2', title: 'Bike to Work Week', description: 'Cycle to work or school for 5 days. Connect Strava to track your rides automatically.', category: 'Global', creditsReward: 300, xpReward: 600, duration: '7 Days', image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: true },
-  { id: '3', title: 'Local Park Cleanup', description: 'Join your cohort to clean up the local park.', category: 'Cohort', creditsReward: 200, xpReward: 400, duration: '1 Day', image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: false },
-  { id: '4', title: 'Active Commuter', description: 'Walk, run or cycle 50km total this month. Tracked via connected fitness apps.', category: 'Global', creditsReward: 400, xpReward: 800, duration: '30 Days', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: true },
-  { id: '5', title: 'Energy Saver Challenge', description: 'Reduce your home energy use by 20% this month.', category: 'Global', creditsReward: 350, xpReward: 700, duration: '30 Days', image: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: false },
-  { id: '6', title: 'Move for the Planet', description: 'Complete 10 hours of verified activity this month. Any movement counts!', category: 'Global', creditsReward: 450, xpReward: 900, duration: '30 Days', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&q=80&w=800', evidenceRequired: false, requiresVerifiedActivity: true },
+  {
+    id: 'step-streak',
+    title: '10-Day Step Streak',
+    description: 'Achieve at least 7,000 steps per day for 10 consecutive days.',
+    category: 'Global',
+    creditsReward: 200,
+    xpReward: 400,
+    duration: '10 Days',
+    durationDays: 10,
+    image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&q=80&w=800',
+    verificationType: 'healthKit',
+    healthKit: ['apple', 'google', 'samsung'],
+    requiresVerifiedActivity: true,
+  },
+  {
+    id: 'green-commute',
+    title: 'Green Commute Challenge',
+    description: 'Walk or cycle a total of 20 km in 7 days.',
+    category: 'Global',
+    creditsReward: 250,
+    xpReward: 500,
+    duration: '7 Days',
+    durationDays: 7,
+    image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&q=80&w=800',
+    verificationType: 'healthKit',
+    healthKit: ['apple', 'google', 'samsung'],
+    requiresVerifiedActivity: true,
+  },
+  {
+    id: 'active-minutes',
+    title: 'Active Minutes Challenge',
+    description: 'Accumulate 150 minutes of moderate-to-vigorous activity in one week.',
+    category: 'Global',
+    creditsReward: 200,
+    xpReward: 400,
+    duration: '7 Days',
+    durationDays: 7,
+    image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&q=80&w=800',
+    verificationType: 'healthKit',
+    healthKit: ['apple', 'google', 'samsung'],
+    requiresVerifiedActivity: true,
+  },
+  {
+    id: 'park-cleanup-video',
+    title: 'Park Clean-Up Video',
+    description: "Record a short video (≥30 seconds) of yourself picking up litter in a park. Include today's code word in the video for verification.",
+    category: 'Cohort',
+    creditsReward: 150,
+    xpReward: 300,
+    duration: '1 Day',
+    durationDays: 1,
+    image: 'https://images.unsplash.com/photo-1618477461853-5f8dd68aa395?auto=format&fit=crop&q=80&w=800',
+    verificationType: 'video',
+    evidenceRequired: true,
+  },
+  {
+    id: 'reuse-cup-video',
+    title: 'Bring Your Own Cup Video',
+    description: 'Record a video of yourself ordering a drink using a reusable cup; say the daily code word on camera.',
+    category: 'Global',
+    creditsReward: 100,
+    xpReward: 200,
+    duration: '1 Day',
+    durationDays: 1,
+    image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=800',
+    verificationType: 'video',
+    evidenceRequired: true,
+  },
+  {
+    id: 'upcycle-demo-video',
+    title: 'Upcycle/Repair Demo',
+    description: 'Record a video showing how you repaired or upcycled an item and include the daily code word.',
+    category: 'Global',
+    creditsReward: 150,
+    xpReward: 300,
+    duration: '1 Day',
+    durationDays: 1,
+    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800',
+    verificationType: 'video',
+    evidenceRequired: true,
+  },
 ];
 
 // 8 Marketplace Items

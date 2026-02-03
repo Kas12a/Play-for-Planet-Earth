@@ -216,3 +216,22 @@ Required secrets:
 - Integrated Workout Planner feature with plan creation, exercise management, and session logging
 - Users earn 5 points per completed workout session
 - Workout stats tracking (total sessions, hours trained, calories burned, weekly progress)
+- V1.4: Quest system overhaul with new verification types
+- Added Health Data Source setting to profile (Apple Health, Google Fit, Samsung Health)
+- New quests with healthKit verification (10-Day Step Streak, Green Commute, Active Minutes)
+- New quests with video verification (Park Clean-Up, Bring Your Own Cup, Upcycle/Repair Demo)
+- Video submission dialog with upload functionality for video quests
+- Quest UI updated with verification type badges (Health Data / Video Proof)
+
+## Quest Verification Types
+
+| Type | Description | Quests |
+|------|-------------|--------|
+| healthKit | Verified via connected health app | Step Streak, Green Commute, Active Minutes |
+| video | Requires video submission with code word | Park Clean-Up, Reuse Cup, Upcycle Demo |
+| strava | Verified via Strava connection | (future) |
+| manual | Self-declared, no verification | (legacy) |
+
+## New Schema Files
+- `scripts/health_data_source_migration.sql` - Adds health_data_source column to profiles
+- `scripts/video_submissions_schema.sql` - Video submissions table for quest verification

@@ -353,6 +353,94 @@ export async function registerRoutes(
     }
   });
 
+  // Submit video for video verification quest
+  app.post("/api/quests/:questId/submit-video", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const { questId } = req.params;
+      const { videoPath, notes } = req.body;
+
+      if (!videoPath) {
+        return res.status(400).json({ error: 'Video path is required' });
+      }
+
+      // Check if user has joined this quest
+      const { data: participation } = await supabaseAdmin
+        .from('quest_participants')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .single();
+
+      if (!participation) {
+        return res.status(400).json({ error: 'You must join the quest first' });
+      }
+
+      // Check for existing submission
+      const { data: existingSubmission } = await supabaseAdmin
+        .from('video_submissions')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .eq('quest_id', questId)
+        .single();
+
+      if (existingSubmission) {
+        if (existingSubmission.status === 'approved') {
+          return res.status(400).json({ error: 'Quest already completed' });
+        }
+        // Update existing pending/rejected submission
+        const { error: updateError } = await supabaseAdmin
+          .from('video_submissions')
+          .update({
+            video_path: videoPath,
+            notes: notes || null,
+            status: 'pending',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingSubmission.id);
+
+        if (updateError) {
+          console.error('Video submission update error:', updateError);
+          return res.status(500).json({ error: 'Failed to update submission' });
+        }
+
+        return res.json({ success: true, message: 'Submission updated' });
+      }
+
+      // Create new submission
+      const { error: insertError } = await supabaseAdmin
+        .from('video_submissions')
+        .insert({
+          user_id: user.id,
+          quest_id: questId,
+          video_path: videoPath,
+          notes: notes || null,
+          status: 'pending',
+        });
+
+      if (insertError) {
+        console.error('Video submission error:', insertError);
+        return res.status(500).json({ error: 'Failed to submit video' });
+      }
+
+      res.json({ success: true, message: 'Video submitted for review' });
+    } catch (error) {
+      console.error('Video submission error:', error);
+      res.status(500).json({ error: 'Failed to submit video' });
+    }
+  });
+
   // Get user's quest participations
   app.get("/api/quests/my", async (req, res) => {
     try {

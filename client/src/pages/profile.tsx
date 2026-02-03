@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings, Shield, Trash2, Download, Share2, Coins, Flame, Star, Trophy, Cloud, GraduationCap, Eye, Wallet, Activity, Link2, RefreshCw, MessageSquare, Camera, Loader2 } from "lucide-react";
+import { Settings, Shield, Trash2, Download, Share2, Coins, Flame, Star, Trophy, Cloud, GraduationCap, Eye, Wallet, Activity, Link2, RefreshCw, MessageSquare, Camera, Loader2, Heart, Smartphone } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useUpload } from "@/hooks/use-upload";
@@ -39,7 +40,7 @@ const badgeIcons: Record<string, any> = {
 
 export default function ProfilePage() {
   const { user: authUser, initialized, session } = useAuth();
-  const { profile, loading: profileLoading, refreshProfile } = useProfile();
+  const { profile, loading: profileLoading, refreshProfile, updateProfile } = useProfile();
   const { user: storeUser, toggleInvestorMode, setFocus } = useStore();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -323,6 +324,55 @@ export default function ProfilePage() {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="w-5 h-5 text-pink-500" />
+            Health Data Source
+          </CardTitle>
+          <CardDescription>
+            Select your health app to verify activity-based quests
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center">
+                <Smartphone className="w-5 h-5 text-pink-500" />
+              </div>
+              <div>
+                <div className="font-medium">Health App Connection</div>
+                <div className="text-sm text-muted-foreground">
+                  {profile?.health_data_source && profile.health_data_source !== 'none' 
+                    ? `Connected to ${profile.health_data_source === 'apple' ? 'Apple Health' : profile.health_data_source === 'google' ? 'Google Fit' : 'Samsung Health'}`
+                    : 'No health app connected'}
+                </div>
+              </div>
+            </div>
+            <Select
+              value={profile?.health_data_source || 'none'}
+              onValueChange={async (value) => {
+                await updateProfile({ health_data_source: value as any });
+                refreshProfile();
+              }}
+            >
+              <SelectTrigger className="w-[180px]" data-testid="select-health-source">
+                <SelectValue placeholder="Select source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="apple">Apple Health</SelectItem>
+                <SelectItem value="google">Google Fit</SelectItem>
+                <SelectItem value="samsung">Samsung Health</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            Note: Health data integration is coming soon. Select your preferred source to be ready for activity-based quests.
+          </p>
         </CardContent>
       </Card>
 
