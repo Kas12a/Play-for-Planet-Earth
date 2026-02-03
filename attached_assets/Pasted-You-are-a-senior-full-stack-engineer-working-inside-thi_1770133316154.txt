@@ -1,0 +1,119 @@
+You are a senior full-stack engineer working inside this Replit project.
+
+GOAL
+Implement a new “Tree-Nation Partner Quest” using Tree-Nation API Option B (Tree-Gift link claim):
+- When a user completes the quest, our backend calls Tree-Nation to create a Tree-Gift and returns a gift URL.
+- The app/web UI shows a “Claim your tree” button that opens the Tree-Gift URL.
+- The Tree is planted regardless; if the user creates a Tree-Nation account during collection, the tree is added to their Tree-Nation forest/profile.
+- IMPORTANT: Keep Tree-Nation API token ONLY on the server. Never expose it to the client.
+
+REFERENCES (use these to get the exact endpoints/params; do not guess)
+- Tree-Nation API overview + test/live token flow + omit species_id for package: https://kb.tree-nation.com/knowledge/api-availability
+- Tree-gift collection / claim behavior: https://kb.tree-nation.com/knowledge/tree-offer-reception
+- Official API endpoints / Postman documentation (find “Plant a tree” that returns Tree-Gift URL): 
+  https://documenter.getpostman.com/view/6643991/S17m1X5P
+  (If that link is blocked, search within docs for “Plant a tree” + “Tree-Gift URL”.)
+
+HIGH-LEVEL REQUIREMENTS
+1) Detect the stack automatically:
+   - Is this Node/Express, Next.js API routes, Fastify, Python, etc.?
+   - Find current auth mechanism (JWT in headers, cookie session, Clerk/Supabase auth, etc.)
+   - Find DB layer (Postgres, SQLite, Prisma, Supabase, Replit DB, etc.)
+   - Follow existing patterns, file structure, and naming conventions.
+
+2) Add environment variables (server-side only):
+   - TREE_NATION_ENV = "test" | "live"
+   - TREE_NATION_API_TOKEN = "<secret>"
+   - TREE_NATION_PLANTER_ID = "<number>"  (Tree-Nation will confirm)
+   - TREE_NATION_API_BASE_URL_TEST = "<from Postman docs>"
+   - TREE_NATION_API_BASE_URL_LIVE = "<from Postman docs>"
+   - TREE_NATION_DEFAULT_QUANTITY = "1"
+   - (Optional) TREE_NATION_SPECIES_ID (only if we explicitly decide to pin; default should be omitted)
+   - (Optional) TREE_NATION_SEND_EMAIL = "false" if the API supports disabling Tree-Nation sending emails (we want to present the link in-app instead).
+   Update .env.example and add clear setup steps in README, without leaking secrets.
+
+3) Data model (adapt to existing DB):
+   Create or extend tables/collections so we can prevent abuse and track each gift.
+   Minimum fields per gift record:
+   - id (uuid)
+   - user_id
+   - quest_key (e.g., "tree_nation_partner_quest_v1")
+   - status: "created" | "opened" | "failed"
+   - tree_nation_gift_url (string)
+   - tree_nation_payload (json, optional)
+   - created_at
+   Constraints:
+   - Enforce ONE gift per user per quest_key (unique index).
+   Also ensure there is a quest completion record or equivalent.
+
+4) Backend API endpoints
+   Implement endpoints with existing auth middleware:
+
+   POST /api/quests/tree-nation/claim
+   - Auth required.
+   - Idempotent: if a gift already exists for this user+quest, return existing gift_url.
+   - Verify quest eligibility (use current quest system):
+       a) if you have “quest completed” flags, require completion first,
+       OR b) treat this endpoint as “complete & claim” for pilot only (document clearly).
+   - Rate-limit/abuse protection (basic): reject if more than 1 claim attempt per minute per user (or use existing limiter).
+   - Call Tree-Nation “Plant a tree / create gift” endpoint from Postman docs:
+       * Use Authorization: Bearer <TOKEN>
+       * Use JSON body with planter_id, quantity=1, message
+       * For Option B: we need a shareable Tree-Gift URL returned.
+       * Omit species_id by default so Tree-Nation uses our configured species package.
+       * If API requires recipients array, set recipient:
+            name: user display name (fallback “PfPE User”)
+            email: user email (if available and acceptable)
+         But prefer a mode that DOES NOT auto-email recipients if there is a parameter for that.
+   - On success: store gift_url, status="created", return { giftUrl, questKey }.
+   - On failure: store failure log, return safe error message.
+
+   GET /api/quests/tree-nation/status
+   - Auth required.
+   - Return latest gift record and whether user can claim.
+
+   OPTIONAL: If Tree-Nation has an endpoint to fetch planting data by tree_id or gift id, implement:
+   GET /api/quests/tree-nation/details
+   - returns species, CO2, certificate URL etc.
+   Only if documented and easy.
+
+5) Frontend integration (only if this repo includes UI)
+   Find the Quests screen/page and add:
+   - A quest card “Tree-Nation Partner Quest” with a “Claim your tree” button.
+   - Button behavior:
+       a) Call POST /api/quests/tree-nation/claim
+       b) Open returned giftUrl in a new tab (web) or in-app browser (mobile) depending on platform.
+       c) After opening, mark locally as “opened” (optional) and refresh status.
+
+   In user Profile page, add a “Tree-Nation” section:
+   - “Trees planted via PfPE: X” (X = count of gift records for user)
+   - Button “Claim latest tree” if an unclaimed gift exists
+   - Link “View Tree-Gift” if gift_url exists
+
+6) QA & tests
+   - Add a simple test for idempotency: second claim returns same giftUrl and does not double-call Tree-Nation.
+   - Test missing env vars => clear startup error.
+   - Ensure token never appears in client bundles or logs.
+   - Add request logging WITHOUT secrets.
+
+7) Deliverables
+   - Commit code changes.
+   - Provide a short “How to test on Replit” section:
+       1) Add env vars
+       2) Run server
+       3) Login
+       4) Trigger claim endpoint
+       5) Confirm giftUrl opens and shows Tree-Gift page
+
+IMPLEMENTATION NOTES
+- Keep secrets in Replit Secrets / env vars only.
+- Prefer server-side fetch with timeout and retries (1 retry max).
+- Keep error messages user-friendly; log technical details server-side.
+- Use existing project patterns for routing, controllers, services, and DB access.
+- If endpoints differ from my suggested paths, adapt to existing conventions, but keep the same behavior.
+
+Start by scanning the repo and summarizing:
+- Stack + key folders
+- Auth method
+- DB method
+Then implement step-by-step with minimal disruption.
