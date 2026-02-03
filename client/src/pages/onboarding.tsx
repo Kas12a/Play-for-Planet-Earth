@@ -47,6 +47,7 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   
   const [formData, setFormData] = useState({
     display_name: '',
@@ -64,8 +65,9 @@ export default function OnboardingPage() {
     }
   }, [initialized, user, setLocation]);
 
+  // Only run on initial profile load, not on every update
   useEffect(() => {
-    if (profile) {
+    if (profile && !initialLoadDone) {
       if (profile.onboarding_complete) {
         setLocation('/');
         return;
@@ -86,8 +88,17 @@ export default function OnboardingPage() {
         allow_location: profile.allow_location || prev.allow_location,
         enable_notifications: profile.enable_notifications || prev.enable_notifications,
       }));
+      
+      setInitialLoadDone(true);
     }
-  }, [profile, setLocation]);
+  }, [profile, initialLoadDone, setLocation]);
+  
+  // Handle redirect if onboarding completed (can happen after initial load)
+  useEffect(() => {
+    if (profile?.onboarding_complete && initialLoadDone) {
+      setLocation('/');
+    }
+  }, [profile?.onboarding_complete, initialLoadDone, setLocation]);
 
   const stepIndex = STEP_ORDER.indexOf(currentStep);
   const totalSteps = STEP_ORDER.length - 1;
