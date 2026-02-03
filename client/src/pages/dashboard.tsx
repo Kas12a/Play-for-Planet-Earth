@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const [fitnessActivities, setFitnessActivities] = useState<ActivityEvent[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesFetched, setActivitiesFetched] = useState(false);
 
   useEffect(() => {
     if (initialized && !authUser) {
@@ -75,11 +76,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetchActivities() {
-      if (!session?.access_token) {
+      if (!session?.access_token || activitiesFetched) {
         setActivitiesLoading(false);
         return;
       }
       try {
+        setActivitiesFetched(true);
         const res = await fetch('/api/activities', {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -91,14 +93,15 @@ export default function DashboardPage() {
         }
       } catch (err) {
         console.error('Failed to fetch activities:', err);
+        setActivitiesFetched(false); // Allow retry on error
       } finally {
         setActivitiesLoading(false);
       }
     }
-    if (initialized && authUser) {
+    if (initialized && authUser && !activitiesFetched) {
       fetchActivities();
     }
-  }, [initialized, authUser, session?.access_token]);
+  }, [initialized, authUser, session?.access_token, activitiesFetched]);
 
   if (!initialized) {
     return (
