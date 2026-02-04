@@ -224,6 +224,8 @@ Required secrets:
 - Eco Quiz verification with 5 daily questions
 - Health App Preference renamed (now clearly "preference only, sync coming in native app")
 - Added ENABLE_HEALTH_SYNC feature flag (default false)
+- Actions page now uses same 12 verifiable items as Quests (ActionType = Quest)
+- Actions and Quests are now unified with same verification methods (GPS, proof, quiz)
 
 ## Quest Verification Types
 

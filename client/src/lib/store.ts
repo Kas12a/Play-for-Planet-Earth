@@ -6,6 +6,33 @@ export type UserRole = 'user' | 'admin';
 export type AgeBand = 'Under 16' | '16-18' | '19-30' | '31+';
 export type TransactionType = 'EARN' | 'REDEEM' | 'DONATE' | 'SPONSOR_TOPUP' | 'PENALTY' | 'REVERSAL';
 
+// Quest/Action verification types - all actions are now verifiable
+export type VerificationType = 'gps_session' | 'proof_video' | 'proof_photo' | 'screenshot_health' | 'quiz';
+export type QuestFrequency = 'daily' | 'weekly' | 'seasonal';
+export type QuestCategory = 'movement' | 'waste' | 'learning' | 'wellbeing' | 'food' | 'community';
+
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  category: QuestCategory;
+  frequency: QuestFrequency;
+  points: number;
+  verification_type: VerificationType;
+  proof_required: boolean;
+  proof_instructions: string;
+  anti_cheat_requires_daily_code: boolean;
+  share_prompt: string;
+  is_active: boolean;
+  sort_order: number;
+  image?: string;
+  joined?: boolean;
+  progress?: number;
+}
+
+// ActionType is now same as Quest - all actions are verifiable
+export type ActionType = Quest;
+
 export interface User {
   id: string;
   email: string;
@@ -24,17 +51,6 @@ export interface User {
   focus?: string;
   betaAccess?: boolean;
   investorMode?: boolean;
-}
-
-export interface ActionType {
-  id: string;
-  title: string;
-  category: 'Waste' | 'Energy' | 'Transport' | 'Food' | 'Nature';
-  baseRewardCredits: number;
-  impactCO2: number;
-  impactWaste: number;
-  description: string;
-  icon: string;
 }
 
 export interface ActionLog {
@@ -81,29 +97,6 @@ export interface Redemption {
   createdAt: string;
 }
 
-export type VerificationType = 'gps_session' | 'proof_video' | 'proof_photo' | 'screenshot_health' | 'quiz';
-export type QuestFrequency = 'daily' | 'weekly' | 'seasonal';
-export type QuestCategory = 'movement' | 'waste' | 'learning' | 'wellbeing' | 'food' | 'community';
-
-export interface Quest {
-  id: string;
-  title: string;
-  description: string;
-  category: QuestCategory;
-  frequency: QuestFrequency;
-  points: number;
-  verification_type: VerificationType;
-  proof_required: boolean;
-  proof_instructions: string;
-  anti_cheat_requires_daily_code: boolean;
-  share_prompt: string;
-  is_active: boolean;
-  sort_order: number;
-  image?: string;
-  joined?: boolean;
-  progress?: number;
-}
-
 export interface Badge {
   id: string;
   name: string;
@@ -132,38 +125,7 @@ export interface DonationProject {
   raised: number;
 }
 
-// Mock Data - 20 Actions across categories
-export const ACTION_TYPES: ActionType[] = [
-  // Transport (5)
-  { id: '1', title: 'Walk Instead of Drive', category: 'Transport', baseRewardCredits: 15, impactCO2: 0.5, impactWaste: 0, description: 'Chose walking over driving for a short trip', icon: 'footprints' },
-  { id: '2', title: 'Bike Commute', category: 'Transport', baseRewardCredits: 20, impactCO2: 1.2, impactWaste: 0, description: 'Cycled to work or school', icon: 'bike' },
-  { id: '3', title: 'Public Transport', category: 'Transport', baseRewardCredits: 15, impactCO2: 0.8, impactWaste: 0, description: 'Took bus, train, or tram', icon: 'bus' },
-  { id: '4', title: 'Carpool', category: 'Transport', baseRewardCredits: 12, impactCO2: 0.6, impactWaste: 0, description: 'Shared a ride with others', icon: 'car' },
-  { id: '5', title: 'Work From Home', category: 'Transport', baseRewardCredits: 10, impactCO2: 1.0, impactWaste: 0, description: 'Avoided commute by working remotely', icon: 'home' },
-  
-  // Energy (5)
-  { id: '6', title: 'Unplug Devices', category: 'Energy', baseRewardCredits: 8, impactCO2: 0.1, impactWaste: 0, description: 'Unplugged unused electronics', icon: 'plug' },
-  { id: '7', title: 'Cold Wash Laundry', category: 'Energy', baseRewardCredits: 12, impactCO2: 0.3, impactWaste: 0, description: 'Washed clothes at 30°C or less', icon: 'thermometer' },
-  { id: '8', title: 'Air Dry Clothes', category: 'Energy', baseRewardCredits: 10, impactCO2: 0.4, impactWaste: 0, description: 'Dried clothes without a dryer', icon: 'wind' },
-  { id: '9', title: 'LED Switch', category: 'Energy', baseRewardCredits: 25, impactCO2: 0.2, impactWaste: 0, description: 'Replaced a bulb with LED', icon: 'lightbulb' },
-  { id: '10', title: 'Shorter Shower', category: 'Energy', baseRewardCredits: 8, impactCO2: 0.15, impactWaste: 0, description: 'Took a 5-minute shower or less', icon: 'droplet' },
-  
-  // Food (5)
-  { id: '11', title: 'Meat-Free Meal', category: 'Food', baseRewardCredits: 18, impactCO2: 1.5, impactWaste: 0, description: 'Ate a plant-based meal', icon: 'salad' },
-  { id: '12', title: 'Local Produce', category: 'Food', baseRewardCredits: 15, impactCO2: 0.4, impactWaste: 0, description: 'Bought locally grown food', icon: 'apple' },
-  { id: '13', title: 'No Food Waste', category: 'Food', baseRewardCredits: 12, impactCO2: 0.3, impactWaste: 0.5, description: 'Finished all food, no waste today', icon: 'utensils' },
-  { id: '14', title: 'Composted Scraps', category: 'Food', baseRewardCredits: 10, impactCO2: 0.2, impactWaste: 0.3, description: 'Composted food scraps', icon: 'leaf' },
-  { id: '15', title: 'Reusable Container', category: 'Food', baseRewardCredits: 8, impactCO2: 0.05, impactWaste: 0.1, description: 'Used reusable container for takeaway', icon: 'package' },
-  
-  // Waste (5)
-  { id: '16', title: 'Refill Water Bottle', category: 'Waste', baseRewardCredits: 10, impactCO2: 0.08, impactWaste: 0.02, description: 'Used refillable bottle', icon: 'droplet' },
-  { id: '17', title: 'Recycled Correctly', category: 'Waste', baseRewardCredits: 8, impactCO2: 0.1, impactWaste: 0.5, description: 'Sorted and recycled waste', icon: 'recycle' },
-  { id: '18', title: 'Refused Plastic Bag', category: 'Waste', baseRewardCredits: 6, impactCO2: 0.03, impactWaste: 0.01, description: 'Said no to a plastic bag', icon: 'x-circle' },
-  { id: '19', title: 'Repaired Item', category: 'Waste', baseRewardCredits: 30, impactCO2: 2.0, impactWaste: 1.0, description: 'Fixed something instead of replacing', icon: 'wrench' },
-  { id: '20', title: 'Zero Waste Shopping', category: 'Waste', baseRewardCredits: 25, impactCO2: 0.4, impactWaste: 0.3, description: 'Shopped with reusable bags/containers', icon: 'shopping-bag' },
-];
-
-// Pilot Quest Pack - 12 verifiable quests
+// Pilot Quest/Action Pack - 12 verifiable items (same for both Quests and Actions)
 export const QUESTS: Quest[] = [
   {
     id: 'pilot_steps_daily',
@@ -359,6 +321,9 @@ export const QUESTS: Quest[] = [
   },
 ];
 
+// ACTION_TYPES is now the same as QUESTS - all are verifiable
+export const ACTION_TYPES: ActionType[] = QUESTS;
+
 // 8 Marketplace Items
 export const MARKETPLACE_ITEMS: MarketplaceItem[] = [
   { id: '1', title: 'Reusable Water Bottle', description: 'Premium stainless steel bottle, 500ml capacity. Keeps drinks cold for 24hrs.', creditsCost: 150, partnerName: 'EcoGear', category: 'Products', imageUrl: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&q=80&w=400' },
@@ -498,7 +463,7 @@ export const useStore = create<AppState>()(
 
         const clientRequestId = generateUUID();
         const multiplier = getCreditsMultiplier(confidence);
-        const creditsEarned = Math.round(actionType.baseRewardCredits * multiplier);
+        const creditsEarned = Math.round(actionType.points * multiplier);
 
         const newLog: ActionLog = {
           id: generateUUID(),
