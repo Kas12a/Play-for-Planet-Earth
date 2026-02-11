@@ -123,6 +123,8 @@ export default function OnboardingPage() {
     setCurrentStep(nextStep);
   };
 
+  const [completing, setCompleting] = useState(false);
+
   const completeOnboarding = async () => {
     setSaving(true);
     setError(null);
@@ -140,11 +142,11 @@ export default function OnboardingPage() {
       return;
     }
     
-    // Small delay to ensure state update propagates, then navigate
     setSaving(false);
+    setCompleting(true);
     setTimeout(() => {
-      window.location.href = '/';
-    }, 100);
+      setLocation('/');
+    }, 1200);
   };
 
   const handleLocationToggle = async (enabled: boolean) => {
@@ -190,6 +192,31 @@ export default function OnboardingPage() {
       return { ...prev, interests: [...current, interest] };
     });
   };
+
+  if (completing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20 z-0"
+          style={{ 
+            backgroundImage: `url(${heroImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-background/70 z-0" />
+        <div className="relative z-10 flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-gradient-to-br from-primary to-emerald-400 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(34,197,94,0.5)]">
+            <Check className="w-10 h-10 text-primary-foreground" />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold font-display gradient-text">You're all set!</h2>
+            <p className="text-muted-foreground">Taking you to your dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!initialized || profileLoading) {
     return (
