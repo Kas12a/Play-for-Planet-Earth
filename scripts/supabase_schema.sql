@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   cohort_id TEXT,
   level INTEGER DEFAULT 1,
   points INTEGER DEFAULT 0,
-  credits INTEGER DEFAULT 50,
+  credits INTEGER DEFAULT 0,
   streak INTEGER DEFAULT 0,
   focus TEXT,
   parent_email TEXT,

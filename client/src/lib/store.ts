@@ -411,7 +411,7 @@ export const useStore = create<AppState>()(
             role: 'user',
             level: 1,
             points: 0,
-            credits: 50,
+            credits: 0,
             streak: 0,
             joinedAt: new Date().toISOString(),
             betaAccess: true,
@@ -433,20 +433,12 @@ export const useStore = create<AppState>()(
             role: 'user',
             level: 1,
             points: 0,
-            credits: 50, // Starting bonus
+            credits: 0,
             streak: 0,
             joinedAt: new Date().toISOString(),
             betaAccess: false,
           },
-          transactions: [{
-            id: generateUUID(),
-            userId: '1',
-            type: 'SPONSOR_TOPUP',
-            amount: 50,
-            sourceType: 'welcome_bonus',
-            clientRequestId: generateUUID(),
-            createdAt: new Date().toISOString(),
-          }]
+          transactions: []
         });
       },
 
