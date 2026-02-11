@@ -216,7 +216,8 @@ export default function FeedbackButton() {
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>Share Your Feedback</DialogTitle>
           <DialogDescription>
-            Help us improve the pilot experience. Your feedback is valuable!
+            Help us improve the pilot experience. Your feedback goes directly to{" "}
+            <span className="font-medium text-foreground">info@playearth.co.uk</span>
           </DialogDescription>
         </DialogHeader>
 
