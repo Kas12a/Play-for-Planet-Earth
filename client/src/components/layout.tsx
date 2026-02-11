@@ -305,7 +305,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Bottom Nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-lg p-2 flex justify-around items-center z-50 pb-safe">
         {navItems
-          .filter(item => ['Dashboard', 'Actions', 'Credits', 'Profile'].includes(item.label))
+          .filter(item => ['Dashboard', 'Quests', 'Credits', 'Profile'].includes(item.label))
           .slice(0, 5)
           .map((item) => (
            <Link key={item.href} href={item.href}>
