@@ -3,10 +3,12 @@ import { useAuth } from '@/lib/authContext';
 import { useAppConfig } from '@/lib/configContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Link, ExternalLink, RefreshCw, CheckCircle2, XCircle, Activity, Shield } from 'lucide-react';
+import { Link, ExternalLink, RefreshCw, CheckCircle2, XCircle, Activity, Shield, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface StravaStatus {
   connected: boolean;
@@ -15,7 +17,7 @@ interface StravaStatus {
 }
 
 export default function SettingsPage() {
-  const { session } = useAuth();
+  const { session, updatePassword } = useAuth();
   const { config } = useAppConfig();
   const { toast } = useToast();
   const [stravaStatus, setStravaStatus] = useState<StravaStatus | null>(null);
@@ -23,6 +25,33 @@ export default function SettingsPage() {
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: 'Password too short', description: 'Password must be at least 6 characters', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Passwords don\'t match', description: 'Please make sure both passwords are the same', variant: 'destructive' });
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await updatePassword(newPassword);
+    setChangingPassword(false);
+    if (error) {
+      toast({ title: 'Failed to update password', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Password updated', description: 'Your password has been changed successfully' });
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  };
 
   useEffect(() => {
     if (session?.access_token) {
@@ -294,6 +323,74 @@ export default function SettingsPage() {
               <Badge variant="outline">Pilot Tester</Badge>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-primary" />
+            Change Password
+          </CardTitle>
+          <CardDescription>Update your account password</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New Password</Label>
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="pr-10"
+                data-testid="input-new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                data-testid="button-toggle-new-password"
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm New Password</Label>
+            <div className="relative">
+              <Input
+                id="confirm-password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your new password"
+                className="pr-10"
+                data-testid="input-confirm-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                data-testid="button-toggle-confirm-password"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          {newPassword && confirmPassword && newPassword !== confirmPassword && (
+            <p className="text-sm text-destructive">Passwords don't match</p>
+          )}
+          <Button
+            onClick={handleChangePassword}
+            disabled={changingPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+            className="w-full"
+            data-testid="button-change-password"
+          >
+            {changingPassword ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <KeyRound className="w-4 h-4 mr-2" />}
+            Update Password
+          </Button>
         </CardContent>
       </Card>
 
