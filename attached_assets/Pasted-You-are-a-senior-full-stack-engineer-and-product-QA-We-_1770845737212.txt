@@ -1,0 +1,161 @@
+You are a senior full-stack engineer and product QA. We have a web app at play4earth.co with an existing in-app modal titled “Share Your Feedback” (radio options: Idea/Suggestion, Bug/Issue, Confusing, Other), a message textarea, it shows “Current screen: <path>”, and a Send button (like our current UI).
+
+Goal
+Upgrade this feedback system so we collect higher quality feedback (structured + actionable), and every submission is:
+1) stored in the database
+2) emailed to info@playearth.co.uk
+3) includes useful metadata for debugging + product decisions
+
+Hard constraints
+- Do NOT break existing UI/UX. Keep it modal-based and visually consistent.
+- Keep it fast: minimal extra fields, only when relevant.
+- Never require the user to leave the flow to give feedback.
+- No asking users for passwords or sensitive info.
+- Implement server-side validation + anti-spam.
+
+Step 0 — Repo inspection
+First, inspect the repo and report back briefly:
+- framework (Next.js/React/Vite/etc.)
+- backend runtime (Next API routes/Express/etc.)
+- database (Supabase/Postgres/etc.)
+- existing feedback component location and current submit behavior
+Then implement the changes using the existing stack patterns.
+
+A) Form improvements (front-end)
+1) Keep the 4 feedback types, but add “Praise/Good” as a 5th option (positive feedback is useful).
+   Types: Praise/Good, Idea/Suggestion, Bug/Issue, Confusing, Other
+
+2) Dynamic fields by type:
+- Bug/Issue:
+  • “Severity” (Low / Medium / High)
+  • “Steps to reproduce” (multiline)
+  • “Expected result” (optional)
+  • “Actual result” (optional)
+- Confusing:
+  • “What were you trying to do?” (multiline)
+  • “What did you expect to happen?” (optional)
+- Idea/Suggestion:
+  • “What problem does this solve?” (multiline)
+  • “Who is it for?” (optional)
+  • “How valuable is this?” (Nice-to-have / Important / Must-have)
+- Praise/Good:
+  • “What did you like?” (multiline)
+- Other:
+  • no extra fields
+
+3) Add “Can we contact you about this?” toggle:
+- Default OFF
+- If ON, show email input
+- Prefill email if the user is logged in and you can access it safely
+
+4) Add optional screenshot upload:
+- Optional, not required
+- Accept: png/jpg/webp
+- Limit size e.g. 2–4 MB
+- Store the file (Supabase Storage or equivalent) and include a link in the email
+(If storage isn’t available, skip screenshot upload but keep the UI placeholder)
+
+5) Autocapture metadata (NO user effort):
+- screen_path (already present)
+- full URL
+- timestamp (ISO)
+- user_agent
+- app version/build (if available in env)
+- viewport size (width/height)
+- referrer
+- logged_in user_id (nullable)
+- session id if you have one (nullable)
+
+6) UX:
+- Disable Send while submitting
+- Show success toast “Thanks! We got it.”
+- Show error toast on failure
+- Clear fields after success
+- Keep the modal open on error so they can retry
+
+B) Backend endpoint
+Create/upgrade a single endpoint: POST /api/feedback (or equivalent)
+It must:
+1) Validate:
+- message length >= 20 chars (except Praise can be >= 10)
+- type is in allowed list
+- optional fields max lengths (prevent abuse)
+- if can_contact=true then validate email format
+2) Rate limit:
+- e.g. 10 requests / 10 minutes per IP
+- plus per user_id if logged in
+3) Store to DB (feedback table)
+4) Email to info@playearth.co.uk:
+- Subject: “[PfPE Feedback] <TYPE> | <screen_path> | <severity if bug>”
+- Body includes:
+  • type + message
+  • dynamic fields (if present)
+  • contact permission + email
+  • metadata block (screen_path, url, ua, time, user_id)
+  • screenshot link if provided
+5) Return JSON { ok: true, id: <feedback_id> }
+
+C) Database
+Create a feedback table if it doesn’t exist.
+
+Minimum columns:
+- id (uuid / serial)
+- created_at (timestamp)
+- type (text)
+- message (text)
+- can_contact (boolean)
+- email (text nullable)
+- user_id (text/uuid nullable)
+- screen_path (text)
+- url (text)
+- user_agent (text)
+- app_version (text nullable)
+- viewport (json/text nullable)
+- severity (text nullable)
+- steps_to_reproduce (text nullable)
+- expected_result (text nullable)
+- actual_result (text nullable)
+- user_intent (text nullable)         // for Confusing
+- expectation (text nullable)         // for Confusing
+- problem_solved (text nullable)      // for Idea
+- target_user (text nullable)         // for Idea
+- value_rating (text nullable)        // for Idea
+- screenshot_url (text nullable)
+- ip_hash (text nullable)             // hash IP for privacy; do NOT store raw IP
+
+D) Email sending
+Implement email sending in a clean provider-agnostic way:
+- Use Resend if available; otherwise SMTP.
+- Required env vars:
+  FEEDBACK_TO_EMAIL=info@playearth.co.uk
+  EMAIL_PROVIDER=resend|smtp
+  EMAIL_FROM="Play for Planet Earth <no-reply@play4earth.co>"  (or a verified domain)
+  If resend: RESEND_API_KEY
+  If smtp: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+
+If email sending fails, still store to DB and return ok=true, but log the error and mark a column email_sent=false (add column email_sent boolean default true; set false if fail).
+
+E) Optional: lightweight internal viewer
+If quick, add an admin-only page /admin/feedback:
+- list last 50 items (type, created_at, screen_path, severity)
+- click to view full details
+Protect it behind an admin check (existing auth), or a simple ADMIN_TOKEN env gate if auth roles aren’t ready.
+
+F) QA checklist
+After implementation:
+- Submit each feedback type and verify:
+  • DB row created
+  • Email received at info@playearth.co.uk
+  • Rate limiting works
+  • Validation works
+  • Screenshot (if implemented) stores + links correctly
+- Provide:
+  1) Summary of files changed
+  2) Migration/SQL needed
+  3) Env vars required
+  4) Notes on any tradeoffs
+
+Important: Keep privacy in mind.
+- Do not store raw IP, only a hash.
+- Do not collect anything not needed for feedback.
+- Keep logs free of user content if possible (only ids).
