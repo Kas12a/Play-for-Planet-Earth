@@ -226,6 +226,13 @@ Required secrets:
 - Added ENABLE_HEALTH_SYNC feature flag (default false)
 - Actions page now uses same 12 verifiable items as Quests (ActionType = Quest)
 - Actions and Quests are now unified with same verification methods (GPS, proof, quiz)
+- V1.6: Feedback system with Resend email integration
+- Feedback identity: Server-side user identity capture (user_email, user_display_name, user_full_name, is_authenticated)
+- Identity derived from auth token + Supabase profiles (never trusted from client)
+- Email subject includes sender name/email; body has identity block at top
+- Admin feedback viewer shows Sender column with name/email; detail dialog shows identity block
+- Guest feedback still accepted with optional contact email
+- Admin viewer now shows last 100 feedback submissions
 
 ## Quest Verification Types
 
