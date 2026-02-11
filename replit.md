@@ -262,6 +262,33 @@ Required secrets:
 - Required in proof videos/photos for quests with `anti_cheat_requires_daily_code=true`
 - Displayed prominently on Quests page and proof submission dialogs
 
+## Feedback System (V1.6)
+
+### Architecture
+- Frontend: `client/src/components/feedback-button.tsx` - Modal-based feedback form
+- Backend: `server/routes.ts` - POST /api/feedback, GET /api/admin/feedback
+- Database: `server/feedback-db.ts` - Local PostgreSQL (not Supabase) for feedback storage
+- Email: `server/feedback-email.ts` - Resend integration for notifications to info@playearth.co.uk
+- Admin: Feedback tab in `/admin` page (admin role required)
+
+### Feedback Types
+- Praise/Good (min 10 chars)
+- Idea/Suggestion (min 20 chars, + problem_solved, target_user, value_rating fields)
+- Bug/Issue (min 20 chars, + severity required, steps_to_reproduce, expected/actual result)
+- Confusing (min 20 chars, + user_intent, expectation fields)
+- Other (min 20 chars)
+
+### Features
+- Dynamic fields per feedback type
+- Optional screenshot upload (PNG/JPG/WebP, max 4MB, via Object Storage)
+- "Can we contact you?" toggle with email prefill
+- Auto-captured metadata: screen_path, URL, user_agent, viewport, referrer, app_version, user_id
+- Rate limiting: 10 requests per 10 minutes per IP + per user
+- IP hashed for privacy (never stored raw)
+- Email notifications via Resend to info@playearth.co.uk
+- email_sent column tracks delivery success
+- Admin viewer in /admin page (Feedback tab)
+
 ## New Schema Files
 - `scripts/health_data_source_migration.sql` - Adds health_data_source column to profiles
 - `scripts/video_submissions_schema.sql` - Video submissions table for quest verification

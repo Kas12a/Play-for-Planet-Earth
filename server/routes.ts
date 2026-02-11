@@ -1,9 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { config } from "@shared/config";
 import { supabaseAdmin } from "./supabase";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { sendFeedbackEmail } from "./feedback-email";
+import { insertFeedback, markEmailFailed, getRecentFeedback } from "./feedback-db";
 import {
   getStravaAuthUrl,
   exchangeStravaCode,
@@ -38,38 +41,151 @@ export async function registerRoutes(
     });
   });
 
-  // Feedback submission endpoint
+  // Rate limiting for feedback
+  const feedbackRateLimit = new Map<string, { count: number; resetAt: number }>();
+  const FEEDBACK_RATE_WINDOW = 10 * 60 * 1000; // 10 minutes
+  const FEEDBACK_RATE_MAX = 10;
+
+  function checkRateLimit(key: string): boolean {
+    const now = Date.now();
+    const entry = feedbackRateLimit.get(key);
+    if (!entry || now > entry.resetAt) {
+      feedbackRateLimit.set(key, { count: 1, resetAt: now + FEEDBACK_RATE_WINDOW });
+      return true;
+    }
+    if (entry.count >= FEEDBACK_RATE_MAX) return false;
+    entry.count++;
+    return true;
+  }
+
+  const ALLOWED_TYPES = ['praise', 'idea', 'bug', 'confusing', 'other'];
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   app.post("/api/feedback", async (req, res) => {
     try {
-      const { type, message, screen, userAgent, userId } = req.body;
+      const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+      const ipHash = crypto.createHash('sha256').update(ip + (process.env.SESSION_SECRET || 'salt')).digest('hex').substring(0, 16);
 
-      if (!message || typeof message !== 'string' || message.trim().length === 0) {
-        return res.status(400).json({ error: 'Message is required' });
+      if (!checkRateLimit(`ip:${ipHash}`)) {
+        return res.status(429).json({ error: 'Too many feedback submissions. Please try again later.' });
       }
 
-      // Store in Supabase if configured
-      if (supabaseAdmin) {
-        const { error } = await supabaseAdmin.from('feedback').insert({
-          user_id: userId || null,
-          type: type || 'other',
-          message: message.trim(),
-          screen: screen || null,
-          user_agent: userAgent || null,
-          app_version: '1.2.0-verified-pilot',
-        });
+      const {
+        type, message, screen_path, url, user_agent, app_version,
+        viewport, referrer, user_id, session_id,
+        can_contact, email,
+        severity, steps_to_reproduce, expected_result, actual_result,
+        user_intent, expectation,
+        problem_solved, target_user, value_rating,
+        screenshot_url,
+      } = req.body;
 
-        if (error) {
-          console.error('Feedback storage error:', error.message);
+      if (!type || !ALLOWED_TYPES.includes(type)) {
+        return res.status(400).json({ error: 'Invalid feedback type.' });
+      }
+
+      if (!message || typeof message !== 'string') {
+        return res.status(400).json({ error: 'Message is required.' });
+      }
+
+      const minLength = type === 'praise' ? 10 : 20;
+      if (message.trim().length < minLength) {
+        return res.status(400).json({ error: `Message must be at least ${minLength} characters.` });
+      }
+
+      if (message.length > 5000) {
+        return res.status(400).json({ error: 'Message is too long (max 5000 characters).' });
+      }
+
+      if (can_contact && email && !EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ error: 'Invalid email address format.' });
+      }
+
+      const textFields = [steps_to_reproduce, expected_result, actual_result, user_intent, expectation, problem_solved, target_user];
+      for (const field of textFields) {
+        if (field && typeof field === 'string' && field.length > 3000) {
+          return res.status(400).json({ error: 'Field content too long (max 3000 characters).' });
         }
       }
 
-      // Log feedback for now (even if Supabase not configured)
-      console.log('📝 Feedback received:', { type, message: message.substring(0, 100), screen });
+      if (user_id && !checkRateLimit(`user:${user_id}`)) {
+        return res.status(429).json({ error: 'Too many feedback submissions. Please try again later.' });
+      }
 
-      res.json({ success: true });
+      const feedbackRow = {
+        type,
+        message: message.trim(),
+        screen_path: screen_path || null,
+        url: url || null,
+        user_agent: user_agent || null,
+        app_version: app_version || '1.5.0-pilot',
+        viewport: viewport || null,
+        referrer: referrer || null,
+        user_id: user_id || null,
+        session_id: session_id || null,
+        can_contact: can_contact || false,
+        email: can_contact && email ? email : null,
+        severity: type === 'bug' ? (severity || null) : null,
+        steps_to_reproduce: type === 'bug' ? (steps_to_reproduce || null) : null,
+        expected_result: type === 'bug' ? (expected_result || null) : null,
+        actual_result: type === 'bug' ? (actual_result || null) : null,
+        user_intent: type === 'confusing' ? (user_intent || null) : null,
+        expectation: type === 'confusing' ? (expectation || null) : null,
+        problem_solved: type === 'idea' ? (problem_solved || null) : null,
+        target_user: type === 'idea' ? (target_user || null) : null,
+        value_rating: type === 'idea' ? (value_rating || null) : null,
+        screenshot_url: screenshot_url || null,
+        ip_hash: ipHash,
+      };
+
+      const feedbackId = await insertFeedback(feedbackRow);
+
+      let emailSent = false;
+      try {
+        emailSent = await sendFeedbackEmail({
+          id: feedbackId || 'unknown',
+          created_at: new Date().toISOString(),
+          ...feedbackRow,
+        });
+      } catch (emailErr) {
+        console.error('Feedback email send failed:', emailErr);
+      }
+
+      if (!emailSent && feedbackId) {
+        await markEmailFailed(feedbackId);
+      }
+
+      console.log('Feedback received:', { id: feedbackId, type });
+
+      res.json({ ok: true, id: feedbackId });
     } catch (error) {
       console.error('Feedback error:', error);
       res.status(500).json({ error: 'Failed to submit feedback' });
+    }
+  });
+
+  app.get("/api/admin/feedback", async (req, res) => {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token || !supabaseAdmin) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const adminEmail = config.ADMIN_EMAIL;
+      if (user.email !== adminEmail) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const items = await getRecentFeedback(50);
+      res.json({ items });
+    } catch (error) {
+      console.error('Admin feedback error:', error);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
