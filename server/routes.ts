@@ -70,9 +70,40 @@ export async function registerRoutes(
         return res.status(429).json({ error: 'Too many feedback submissions. Please try again later.' });
       }
 
+      let authUserId: string | null = null;
+      let authUserEmail: string | null = null;
+      let profileDisplayName: string | null = null;
+      let profileFullName: string | null = null;
+      let isAuthenticated = false;
+
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (token && supabaseAdmin) {
+        try {
+          const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+          if (!error && user) {
+            isAuthenticated = true;
+            authUserId = user.id;
+            authUserEmail = user.email || null;
+
+            const { data: profile } = await supabaseAdmin
+              .from('profiles')
+              .select('display_name, full_name')
+              .eq('id', user.id)
+              .single();
+
+            if (profile) {
+              profileDisplayName = profile.display_name || null;
+              profileFullName = profile.full_name || null;
+            }
+          }
+        } catch (authErr) {
+          console.error('Feedback auth lookup failed (continuing as guest):', authErr);
+        }
+      }
+
       const {
         type, message, screen_path, url, user_agent, app_version,
-        viewport, referrer, user_id, session_id,
+        viewport, referrer, session_id,
         can_contact, email,
         severity, steps_to_reproduce, expected_result, actual_result,
         user_intent, expectation,
@@ -108,9 +139,13 @@ export async function registerRoutes(
         }
       }
 
-      if (user_id && !checkRateLimit(`user:${user_id}`)) {
+      if (authUserId && !checkRateLimit(`user:${authUserId}`)) {
         return res.status(429).json({ error: 'Too many feedback submissions. Please try again later.' });
       }
+
+      const contactEmail = isAuthenticated
+        ? authUserEmail
+        : (can_contact && email ? email : null);
 
       const feedbackRow = {
         type,
@@ -121,10 +156,10 @@ export async function registerRoutes(
         app_version: app_version || '1.5.0-pilot',
         viewport: viewport || null,
         referrer: referrer || null,
-        user_id: user_id || null,
+        user_id: authUserId || null,
         session_id: session_id || null,
         can_contact: can_contact || false,
-        email: can_contact && email ? email : null,
+        email: contactEmail,
         severity: type === 'bug' ? (severity || null) : null,
         steps_to_reproduce: type === 'bug' ? (steps_to_reproduce || null) : null,
         expected_result: type === 'bug' ? (expected_result || null) : null,
@@ -136,6 +171,10 @@ export async function registerRoutes(
         value_rating: type === 'idea' ? (value_rating || null) : null,
         screenshot_url: screenshot_url || null,
         ip_hash: ipHash,
+        user_email: authUserEmail,
+        user_display_name: profileDisplayName,
+        user_full_name: profileFullName,
+        is_authenticated: isAuthenticated,
       };
 
       const feedbackId = await insertFeedback(feedbackRow);
@@ -155,7 +194,7 @@ export async function registerRoutes(
         await markEmailFailed(feedbackId);
       }
 
-      console.log('Feedback received:', { id: feedbackId, type });
+      console.log('Feedback received:', { id: feedbackId, type, isAuthenticated, user: profileDisplayName || authUserEmail || 'guest' });
 
       res.json({ ok: true, id: feedbackId });
     } catch (error) {
@@ -181,7 +220,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      const items = await getRecentFeedback(50);
+      const items = await getRecentFeedback(100);
       res.json({ items });
     } catch (error) {
       console.error('Admin feedback error:', error);

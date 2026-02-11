@@ -68,6 +68,10 @@ interface FeedbackEmailData {
   screenshot_url?: string;
   referrer?: string;
   session_id?: string;
+  user_email?: string | null;
+  user_display_name?: string | null;
+  user_full_name?: string | null;
+  is_authenticated?: boolean;
 }
 
 function typeLabel(type: string): string {
@@ -81,9 +85,17 @@ function typeLabel(type: string): string {
   return labels[type] || type;
 }
 
+function senderLabel(data: FeedbackEmailData): string {
+  if (data.is_authenticated) {
+    return data.user_display_name || data.user_full_name || data.user_email || 'Authenticated User';
+  }
+  return 'Guest';
+}
+
 function buildSubject(data: FeedbackEmailData): string {
   const parts = ['[PfPE Feedback]', typeLabel(data.type)];
   if (data.screen_path) parts.push(`| ${data.screen_path}`);
+  parts.push(`| ${senderLabel(data)}`);
   if (data.severity && data.type === 'bug') parts.push(`| ${data.severity}`);
   return parts.join(' ');
 }
@@ -92,6 +104,22 @@ function buildHtmlBody(data: FeedbackEmailData): string {
   const sections: string[] = [];
 
   sections.push(`<h2 style="color:#16a34a;">Play for Planet Earth — Feedback</h2>`);
+
+  sections.push(`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;">`);
+  sections.push(`<h3 style="margin:0 0 8px;color:#166534;font-size:14px;">Sender</h3>`);
+  if (data.is_authenticated) {
+    const name = data.user_display_name || data.user_full_name || 'Unknown';
+    sections.push(`<p style="margin:2px 0;"><strong>From:</strong> ${escapeHtml(name)}</p>`);
+    if (data.user_email) sections.push(`<p style="margin:2px 0;"><strong>Email:</strong> ${escapeHtml(data.user_email)}</p>`);
+    if (data.user_id) sections.push(`<p style="margin:2px 0;"><strong>User ID:</strong> ${escapeHtml(data.user_id)}</p>`);
+  } else {
+    sections.push(`<p style="margin:2px 0;"><strong>From:</strong> Guest (not logged in)</p>`);
+    if (data.can_contact && data.email) {
+      sections.push(`<p style="margin:2px 0;"><strong>Contact email:</strong> ${escapeHtml(data.email)}</p>`);
+    }
+  }
+  sections.push(`</div>`);
+
   sections.push(`<p><strong>Type:</strong> ${typeLabel(data.type)}</p>`);
   sections.push(`<p><strong>Message:</strong></p><blockquote style="border-left:3px solid #16a34a;padding-left:12px;color:#333;">${escapeHtml(data.message)}</blockquote>`);
 

@@ -196,7 +196,7 @@ export default function AdminPage() {
           <Card>
             <CardHeader>
               <CardTitle>User Feedback</CardTitle>
-              <CardDescription>Latest 50 feedback submissions</CardDescription>
+              <CardDescription>Latest 100 feedback submissions</CardDescription>
             </CardHeader>
             <CardContent>
               {feedbackLoading ? (
@@ -210,6 +210,7 @@ export default function AdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Type</TableHead>
+                      <TableHead>Sender</TableHead>
                       <TableHead>Screen</TableHead>
                       <TableHead>Severity</TableHead>
                       <TableHead>Date</TableHead>
@@ -224,6 +225,16 @@ export default function AdminPage() {
                           <Badge variant={item.type === 'bug' ? 'destructive' : item.type === 'praise' ? 'default' : 'outline'}>
                             {item.type}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.is_authenticated ? (
+                            <div>
+                              <div className="font-medium">{item.user_display_name || item.user_full_name || 'User'}</div>
+                              <div className="text-xs text-muted-foreground">{item.user_email || '-'}</div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic">Guest</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm">{item.screen_path || '-'}</TableCell>
                         <TableCell>
@@ -272,6 +283,19 @@ export default function AdminPage() {
           {selectedFeedback && (
             <ScrollArea className="max-h-[60vh]">
               <div className="space-y-4 pr-4">
+                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-300 mb-1">Sender</p>
+                  {selectedFeedback.is_authenticated ? (
+                    <div className="space-y-0.5 text-sm">
+                      <div><span className="font-medium">Name:</span> {selectedFeedback.user_display_name || selectedFeedback.user_full_name || 'Unknown'}</div>
+                      <div><span className="font-medium">Email:</span> {selectedFeedback.user_email || '-'}</div>
+                      <div><span className="font-medium">User ID:</span> {selectedFeedback.user_id || '-'}</div>
+                    </div>
+                  ) : (
+                    <p className="text-sm italic text-muted-foreground">Guest (not logged in)</p>
+                  )}
+                </div>
+
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Message</p>
                   <p className="mt-1 whitespace-pre-wrap">{selectedFeedback.message}</p>

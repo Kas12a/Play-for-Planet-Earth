@@ -24,6 +24,7 @@ import {
 import { MessageSquare, Send, Loader2, Camera, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/authContext";
 import { useLocation } from "wouter";
 import { useUpload } from "@/hooks/use-upload";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,6 +46,7 @@ export default function FeedbackButton() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user } = useStore();
+  const { session } = useAuth();
   const [location] = useLocation();
 
   const [severity, setSeverity] = useState("");
@@ -154,7 +156,6 @@ export default function FeedbackButton() {
         app_version: "1.5.0-pilot",
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         referrer: document.referrer || null,
-        user_id: user?.id || null,
         session_id: null,
         can_contact: canContact,
         email: canContact ? (contactEmail || user?.email || null) : null,
@@ -170,9 +171,14 @@ export default function FeedbackButton() {
         screenshot_url,
       };
 
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch("/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
 
