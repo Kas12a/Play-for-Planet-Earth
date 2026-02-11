@@ -124,8 +124,12 @@ export function useProfile() {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id);
+      .upsert({
+        id: user.id,
+        email: user.email || '',
+        ...updates,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
 
     if (!error && profile) {
       setProfile({ ...profile, ...updates });
