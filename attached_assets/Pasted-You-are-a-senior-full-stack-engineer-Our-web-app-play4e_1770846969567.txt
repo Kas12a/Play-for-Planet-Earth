@@ -1,0 +1,95 @@
+You are a senior full-stack engineer. Our web app (play4earth.co) has authentication and user profiles. We already have an in-app “Share Your Feedback” modal (types: Idea/Suggestion, Bug/Issue, Confusing, Other, plus message box and current screen path). 
+
+New requirement (must-have):
+When a logged-in user submits feedback, we MUST be able to identify exactly which person/profile sent it.
+That identity must be:
+- stored in the database with the feedback
+- included in the email sent to info@playearth.co.uk
+- shown in an internal feedback list (optional, but preferred)
+
+Do this WITHOUT breaking the current UI and without collecting passwords or sensitive info.
+
+Step 0 — Inspect and report
+First, inspect the repo and briefly report:
+- auth provider (Supabase Auth / NextAuth / custom)
+- profile table (where user name/email is stored)
+- how to access current user on client + server
+Then implement as below using the existing patterns.
+
+A) Capture identity (logged-in users)
+On feedback submit:
+1) Client should NOT trust identity fields from the browser.
+2) Server must derive identity from the authenticated session/token.
+
+Server must attach:
+- user_id (auth UID)
+- profile_id if separate
+- full_name (from profile) OR display_name
+- email (from auth)  [only if allowed by your policies; for internal ops it’s OK]
+- optional: username/handle
+- optional: role (if exists)
+
+If user is NOT logged in:
+- store user_id = null
+- still accept feedback
+- ask “Can we contact you?” toggle and optional email
+- BUT clearly mark emails as Anonymous/Guest in the email subject/body.
+
+B) Database changes
+Create/alter a feedback table with these identity fields:
+- user_id (uuid/text) nullable
+- profile_id (uuid/text) nullable
+- user_email (text) nullable
+- user_display_name (text) nullable
+- user_full_name (text) nullable
+- is_authenticated (boolean)
+Also keep existing fields (type, message, metadata, etc.).
+
+IMPORTANT:
+- Do not rely on client-provided name/email when logged in.
+- For logged-in users, fetch profile data server-side from the profiles table keyed by user_id.
+
+C) Backend endpoint
+Implement POST /api/feedback (or your stack equivalent) that:
+1) Requires authentication if user is logged in (derive from cookies/session headers).
+2) Reads session user_id from auth.
+3) Fetches profile row (e.g., profiles where id=user_id) and extracts:
+   display_name/full_name
+4) Stores feedback + identity fields in DB.
+5) Emails info@playearth.co.uk with identity block at the top.
+
+Email rules:
+- Subject: “[PfPE Feedback] <TYPE> | <screen_path> | <USER_DISPLAY_NAME or USER_EMAIL or Guest>”
+- Body must start with:
+  “From: <full_name/display_name>”
+  “Email: <email>”
+  “User ID: <user_id>”
+  “Profile link: <internal profile url if exists>”
+Then include message, dynamic fields, metadata.
+
+D) Internal viewer (strongly preferred)
+Add /admin/feedback page:
+- list last 100 feedbacks
+- columns: created_at, type, screen_path, user_display_name, user_email, severity
+- click to detail view
+Protect it:
+- If roles exist: only admin role
+- Else use env var ADMIN_TOKEN and require query/header (document how).
+
+E) Security & privacy
+- Never store raw IP. Hash IP if you already do rate limiting.
+- Only store identity fields needed for ops + product improvement.
+- Keep feedback endpoint protected against spoofing by deriving identity server-side.
+- Ensure RLS policies (if Supabase) allow inserts from authenticated users and reads only for service role/admin.
+
+F) Deliverables
+- Provide migration SQL (or Supabase SQL) for feedback table changes
+- List files changed
+- Add required env vars (FEEDBACK_TO_EMAIL=info@playearth.co.uk, EMAIL_PROVIDER, etc.)
+- Test plan: submit feedback while logged in and confirm:
+  1) DB row has user_id + display_name + email
+  2) Email includes those fields
+  3) Admin list shows the sender identity
+
+Do the work now in the repo with clean commits.
+Do not change unrelated code.

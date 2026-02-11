@@ -29,6 +29,10 @@ export interface FeedbackRow {
   value_rating?: string | null;
   screenshot_url?: string | null;
   ip_hash?: string | null;
+  user_email?: string | null;
+  user_display_name?: string | null;
+  user_full_name?: string | null;
+  is_authenticated?: boolean;
 }
 
 export async function insertFeedback(row: FeedbackRow): Promise<string | null> {
@@ -41,8 +45,9 @@ export async function insertFeedback(row: FeedbackRow): Promise<string | null> {
         severity, steps_to_reproduce, expected_result, actual_result,
         user_intent, expectation,
         problem_solved, target_user, value_rating,
-        screenshot_url, ip_hash
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+        screenshot_url, ip_hash,
+        user_email, user_display_name, user_full_name, is_authenticated
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
       RETURNING id`,
       [
         row.type, row.message, row.screen_path, row.url, row.user_agent, row.app_version,
@@ -52,6 +57,7 @@ export async function insertFeedback(row: FeedbackRow): Promise<string | null> {
         row.user_intent, row.expectation,
         row.problem_solved, row.target_user, row.value_rating,
         row.screenshot_url, row.ip_hash,
+        row.user_email, row.user_display_name, row.user_full_name, row.is_authenticated || false,
       ]
     );
     return result.rows[0]?.id || null;
@@ -69,7 +75,7 @@ export async function markEmailFailed(id: string): Promise<void> {
   }
 }
 
-export async function getRecentFeedback(limit = 50): Promise<any[]> {
+export async function getRecentFeedback(limit = 100): Promise<any[]> {
   try {
     const result = await pool.query(
       'SELECT * FROM feedback ORDER BY created_at DESC LIMIT $1',
