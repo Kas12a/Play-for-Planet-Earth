@@ -10,8 +10,8 @@ import { Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 const DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export function EmailVerificationModal() {
-  const { user, resendVerification } = useAuth();
-  const { profile, updateProfile } = useProfile();
+  const { user } = useAuth();
+  const { profile, updateProfile, refreshProfile } = useProfile();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -20,36 +20,42 @@ export function EmailVerificationModal() {
 
   useEffect(() => {
     if (!user || !profile) return;
-    
-    // Check if email is already verified in our profiles table
     if (profile.email_verified) return;
-    
-    // Check if user dismissed recently
     const dismissedAt = profile.email_verify_dismissed_at;
     if (dismissedAt) {
       const dismissedTime = new Date(dismissedAt).getTime();
-      const now = Date.now();
-      if (now - dismissedTime < DISMISS_COOLDOWN_MS) {
-        return;
-      }
+      if (Date.now() - dismissedTime < DISMISS_COOLDOWN_MS) return;
     }
-    
-    // Show modal
     setOpen(true);
   }, [user, profile]);
 
   const handleSendVerification = async () => {
-    if (!user?.email) return;
     setSending(true);
     setError(null);
     setSent(false);
-    
-    const { error } = await resendVerification(user.email);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
+
+    try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error('Not connected');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to send verification email');
+      } else {
+        setSent(true);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to send verification email');
     }
     setSending(false);
   };
@@ -57,32 +63,18 @@ export function EmailVerificationModal() {
   const handleCheckVerified = async () => {
     setChecking(true);
     setError(null);
-    
-    const supabase = getSupabase();
-    if (!supabase) {
-      setError('Unable to check verification status');
-      setChecking(false);
-      return;
-    }
-    
-    // Check Supabase auth for email confirmation (from clicking link)
-    const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
-    
-    if (error) {
+
+    try {
+      if (refreshProfile) {
+        await refreshProfile();
+      }
+      if (profile?.email_verified) {
+        setOpen(false);
+      } else {
+        setError('Email not yet verified. Please check your inbox and click the verification link.');
+      }
+    } catch {
       setError('Failed to check verification status');
-      setChecking(false);
-      return;
-    }
-    
-    if (refreshedUser?.email_confirmed_at || refreshedUser?.confirmed_at) {
-      // Mark as verified in our profiles table
-      await updateProfile({ 
-        email_verified: true, 
-        email_verified_at: new Date().toISOString() 
-      });
-      setOpen(false);
-    } else {
-      setError('Email not yet verified. Please check your inbox and click the verification link.');
     }
     setChecking(false);
   };
@@ -93,8 +85,6 @@ export function EmailVerificationModal() {
   };
 
   if (!user || !profile) return null;
-  
-  // Use our profile's email_verified field
   if (profile.email_verified) return null;
 
   return (
@@ -173,8 +163,6 @@ export function EmailVerificationBanner({ onVerifyClick }: { onVerifyClick?: () 
   const { profile } = useProfile();
   
   if (!user || !profile) return null;
-  
-  // Use our profile's email_verified field
   if (profile.email_verified) return null;
   
   return (

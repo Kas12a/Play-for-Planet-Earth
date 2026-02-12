@@ -126,11 +126,14 @@ export default function AuthPage() {
           setError(error.message);
         }
       } else if (needsVerification) {
-        // Email confirmation is required (Supabase setting) - show verification screen
         setVerificationEmail(email);
         setVerificationSent(true);
+        fetch('/api/auth/send-verification-public', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }).catch(() => {});
       } else {
-        // Session created immediately - go to onboarding
         setLocation("/onboarding");
       }
     } catch (err) {
@@ -142,9 +145,19 @@ export default function AuthPage() {
 
   const handleResendVerification = async () => {
     setLoading(true);
-    const { error } = await resendVerification(verificationEmail);
-    if (error) {
-      setError(error.message);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/send-verification-public', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verificationEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to send verification email');
+      }
+    } catch {
+      setError('Failed to send verification email. Please try again.');
     }
     setLoading(false);
   };

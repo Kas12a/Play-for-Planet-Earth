@@ -184,6 +184,42 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+export async function sendVerificationEmail(toEmail: string, verifyUrl: string): Promise<boolean> {
+  try {
+    const { client, fromEmail } = await getResendClient();
+
+    const result = await client.emails.send({
+      from: fromEmail || 'Play for Planet Earth <onboarding@resend.dev>',
+      to: toEmail,
+      subject: 'Verify your email - Play for Planet Earth',
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f4f5;padding:32px;">
+  <div style="max-width:480px;margin:0 auto;background:white;border-radius:12px;padding:40px 32px;text-align:center;">
+    <div style="width:56px;height:56px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;">&#127793;</div>
+    <h1 style="font-size:22px;color:#111;margin-bottom:8px;">Verify your email</h1>
+    <p style="color:#666;line-height:1.6;margin-bottom:24px;">Click the button below to verify your email address and secure your Play for Planet Earth account.</p>
+    <a href="${verifyUrl}" style="display:inline-block;background:#16a34a;color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Verify Email</a>
+    <p style="color:#999;font-size:13px;margin-top:24px;line-height:1.5;">This link expires in 24 hours.<br/>If you didn't create an account, you can safely ignore this email.</p>
+    <hr style="border:none;border-top:1px solid #eee;margin:24px 0 16px;" />
+    <p style="color:#bbb;font-size:12px;">Play for Planet Earth</p>
+  </div>
+</body>
+</html>`,
+    });
+
+    if (result.error) {
+      console.error('Verification email error:', result.error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+    return false;
+  }
+}
+
 export async function sendFeedbackEmail(data: FeedbackEmailData): Promise<boolean> {
   try {
     const { client, fromEmail } = await getResendClient();

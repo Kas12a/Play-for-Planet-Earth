@@ -185,6 +185,7 @@ export async function registerRoutes(
           id: feedbackId || 'unknown',
           created_at: new Date().toISOString(),
           ...feedbackRow,
+          user_id: feedbackRow.user_id ?? undefined,
         });
       } catch (emailErr) {
         console.error('Feedback email send failed:', emailErr);
@@ -1460,6 +1461,188 @@ export async function registerRoutes(
       res.status(500).json({ error: 'Failed to update profile picture' });
     }
   });
+
+  // ── Email Verification via Resend ──────────────────────────
+
+  function createVerificationToken(userId: string, email: string): string {
+    const payload = JSON.stringify({ userId, email, exp: Date.now() + 24 * 60 * 60 * 1000 });
+    const encoded = Buffer.from(payload).toString('base64url');
+    const sig = crypto.createHmac('sha256', process.env.SESSION_SECRET || 'verify-secret').update(encoded).digest('base64url');
+    return `${encoded}.${sig}`;
+  }
+
+  function verifyToken(token: string): { userId: string; email: string } | null {
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [encoded, sig] = parts;
+    const expectedSig = crypto.createHmac('sha256', process.env.SESSION_SECRET || 'verify-secret').update(encoded).digest('base64url');
+    if (sig !== expectedSig) return null;
+    try {
+      const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString());
+      if (payload.exp < Date.now()) return null;
+      return { userId: payload.userId, email: payload.email };
+    } catch {
+      return null;
+    }
+  }
+
+  app.post("/api/auth/send-verification", async (req, res) => {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (!token || !supabaseAdmin) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error || !user) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const email = user.email;
+      if (!email) {
+        return res.status(400).json({ error: 'No email associated with account' });
+      }
+
+      const verificationToken = createVerificationToken(user.id, email);
+      const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, '') || `https://${req.headers.host}`;
+      const verifyUrl = `${origin}/api/auth/verify-email?token=${verificationToken}`;
+
+      const { sendVerificationEmail } = await import('./feedback-email');
+      const sent = await sendVerificationEmail(email, verifyUrl);
+
+      if (!sent) {
+        return res.status(500).json({ error: 'Failed to send verification email. Please try again later.' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Send verification error:', error);
+      res.status(500).json({ error: 'Failed to send verification email' });
+    }
+  });
+
+  app.post("/api/auth/send-verification-public", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || !supabaseAdmin) {
+        return res.status(400).json({ error: 'Email required' });
+      }
+
+      const ip = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+      const ipHash = crypto.createHash('sha256').update(ip + (process.env.SESSION_SECRET || 'salt')).digest('hex').substring(0, 16);
+      if (!checkRateLimit(`verify:${ipHash}`)) {
+        return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+      }
+
+      const { data: profileRows, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .limit(1);
+
+      let userId: string | null = null;
+
+      if (!profileError && profileRows && profileRows.length > 0) {
+        userId = profileRows[0].id;
+      } else {
+        let page = 1;
+        const perPage = 50;
+        let found = false;
+        while (!found) {
+          const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+          if (listError || !users || users.length === 0) break;
+          const match = users.find((u: any) => u.email === email);
+          if (match) { userId = match.id; found = true; }
+          if (users.length < perPage) break;
+          page++;
+        }
+      }
+
+      if (!userId) {
+        return res.json({ success: true });
+      }
+
+      const verificationToken = createVerificationToken(userId, email);
+      const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, '') || `https://${req.headers.host}`;
+      const verifyUrl = `${origin}/api/auth/verify-email?token=${verificationToken}`;
+
+      const { sendVerificationEmail } = await import('./feedback-email');
+      await sendVerificationEmail(email, verifyUrl);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Send public verification error:', error);
+      res.status(500).json({ error: 'Failed to send verification email' });
+    }
+  });
+
+  app.get("/api/auth/verify-email", async (req, res) => {
+    try {
+      const tokenStr = req.query.token as string;
+      if (!tokenStr) {
+        return res.status(400).send(verificationResultPage(false, 'Missing verification token.'));
+      }
+
+      const payload = verifyToken(tokenStr);
+      if (!payload) {
+        return res.status(400).send(verificationResultPage(false, 'This link has expired or is invalid. Please request a new verification email.'));
+      }
+
+      if (!supabaseAdmin) {
+        return res.status(500).send(verificationResultPage(false, 'Server configuration error.'));
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          email_verified: true, 
+          email_verified_at: new Date().toISOString() 
+        })
+        .eq('id', payload.userId);
+
+      if (updateError) {
+        console.error('Verify email update error:', updateError);
+        return res.status(500).send(verificationResultPage(false, 'Failed to verify email. Please try again.'));
+      }
+
+      const origin = req.headers.referer?.split('/api')[0] || `https://${req.headers.host}`;
+      res.send(verificationResultPage(true, 'Your email has been verified!', origin));
+    } catch (error) {
+      console.error('Verify email error:', error);
+      res.status(500).send(verificationResultPage(false, 'An error occurred during verification.'));
+    }
+  });
+
+  function verificationResultPage(success: boolean, message: string, redirectUrl?: string): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification - Play for Planet Earth</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #fafafa; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 48px 32px; max-width: 420px; width: 100%; text-align: center; }
+    .icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; }
+    .icon.success { background: rgba(34,197,94,0.1); }
+    .icon.error { background: rgba(239,68,68,0.1); }
+    h1 { font-size: 24px; margin-bottom: 12px; }
+    p { color: #a1a1aa; line-height: 1.6; margin-bottom: 24px; }
+    a.btn { display: inline-block; background: #16a34a; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500; transition: background 0.2s; }
+    a.btn:hover { background: #15803d; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon ${success ? 'success' : 'error'}">${success ? '&#10003;' : '&#10007;'}</div>
+    <h1>${success ? 'Email Verified!' : 'Verification Failed'}</h1>
+    <p>${message}</p>
+    ${redirectUrl ? `<a class="btn" href="${redirectUrl}">Open App</a>` : ''}
+  </div>
+</body>
+</html>`;
+  }
 
   return httpServer;
 }
